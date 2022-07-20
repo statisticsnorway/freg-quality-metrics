@@ -1,0 +1,11 @@
+# documentation https://pycrunch.com/docs/configuration-file
+discovery:
+    exclusions:
+        # (example) do not search tests in 'ignored_folder' folder
+        - venv/
+        - venv\
+engine:
+    runtime: pytest
+    enable-web-ui: false
+    load-pytest-plugins: true
+

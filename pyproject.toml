@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "ssb-python-microservice-template"
+name = "freg-quality-metrics"
 version = "0.1.0"
-description = "A template repository for Python microservices targeting Kuberntes deployment"
-authors = ["Lars-Roger Billingsø <lrb@ssb.no>"]
+description = "Quality-metrics for FREG"
+authors = ["Ole Bredesen-Vestby <obv@ssb.no>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"

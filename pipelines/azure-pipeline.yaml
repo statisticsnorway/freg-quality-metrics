@@ -73,14 +73,14 @@ jobs:
         displayName: 'Login to GCR'
         inputs:
           command: login
-          containerRegistry: gcrServiceConnection-Cumulus
+          containerRegistry: gcrServiceConnection-Freg
 
       # Push Docker Image to GCR
       - task: Docker@2
         displayName: 'Push image'
         inputs:
           ContainerRegistry: |
-            gcrServiceConnection-Cumulus
+            gcrServiceConnection-Freg
           repository: $(repoName)
           command: 'push'
           tags: |

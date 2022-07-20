@@ -19,9 +19,9 @@ variables:
   - group: Hemmeligheter
   # Variables defined here
   - name: appname
-    value: <appname>
+    value: freg-quality-metrics
   - name: teamname
-    value: <teamname>
+    value: freg
   - name: fullSha
     value: '$(Build.SourceVersion)'
   - name: imageName
@@ -39,7 +39,7 @@ resources:
       type: github
       name: statisticsnorway/azure-pipelines-templates
       ref: refs/tags/1.1.30
-      endpoint: <serviceconnection-to-github>
+      endpoint: github-freg
 
 # Job which builds Docker image, pushes this to GCR and checks for any image vulnerabilities
 jobs:

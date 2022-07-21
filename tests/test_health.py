@@ -1,6 +1,6 @@
 import logging
 from fastapi.testclient import TestClient
-from app.main import app as api
+from app.app import app as api
 
 client = TestClient(api)
 

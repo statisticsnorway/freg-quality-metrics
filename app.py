@@ -7,7 +7,7 @@ import random
 import prometheus_client
 
 # Local class for calling our BigQuery databases
-# from api.bigquery import BigQuery
+from api.bigquery import BigQuery
 # from apscheduler.schedulers.background import BackgroundScheduler
 
 # Flask (webapp library) and flask-related dispatcher

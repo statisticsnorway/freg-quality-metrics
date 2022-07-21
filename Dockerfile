@@ -39,6 +39,6 @@ COPY ./app .
 
 USER 9000
 
-CMD ["gunicorn", "main:app", "-b", "0.0.0.0:8080", "-w", "1","-k", "uvicorn.workers.UvicornWorker", "-t", "0", "--log-config", "logging.config", "--log-level", "info"]
+CMD ["gunicorn", "app:app", "-b", "0.0.0.0:8080", "-w", "1","-k", "uvicorn.workers.UvicornWorker", "-t", "0", "--log-config", "logging.config", "--log-level", "info"]
 
 EXPOSE 8080

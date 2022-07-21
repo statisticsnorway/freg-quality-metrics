@@ -35,10 +35,17 @@ COPY poetry.lock pyproject.toml ./
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 RUN poetry install --no-dev
 
-COPY ./app .
+RUN mkdir /app
+WORKDIR /app
 
-USER 9000
+COPY ./bin/run.sh /app/bin/run.sh
+COPY ./api /app/api
+COPY ./app.py /app/app.py
 
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:8080", "-w", "1","-k", "uvicorn.workers.UvicornWorker", "-t", "0", "--log-config", "logging.config", "--log-level", "info"]
+# Create a non-root user
+RUN useradd -ms /bin/bash aurora
+
+#USER 9000
 
 EXPOSE 8080
+ENTRYPOINT ["bash", "/app/bin/run.sh"]

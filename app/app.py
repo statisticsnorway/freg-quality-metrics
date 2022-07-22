@@ -202,7 +202,7 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
-"""
+
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
     lambda: count_total_and_distinct(
@@ -213,17 +213,41 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
-"""
-# Count hendelsestype
+
+# Count how many with each status
+scheduler.add_job(
+    lambda: group_by_and_count(database="inndata", table="v_status", column="status"),
+    "interval",
+    **kwargs,
+)
+
+# Count how many with each sivilstand
+scheduler.add_job(
+    lambda: group_by_and_count(
+        database="inndata", table="v_sivilstand", column="sivilstand"
+    ),
+    "interval",
+    **kwargs,
+)
+
 scheduler.add_job(
     lambda: count_hendelsetype(),
     "interval",
     **kwargs,
 )
 
+# Count how many with each sivilstand
+scheduler.add_job(
+    lambda: check_valid_and_invalid_fnr(
+        database="inndata",
+        table="v_identifikasjonsnummer",
+    ),
+    "interval",
+    **kwargs,
+)
 
 # Latest timestamp
-# scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
+scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
 
 
 @app.route("/health/ready")

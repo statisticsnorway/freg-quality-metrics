@@ -6,7 +6,7 @@ from google.cloud import bigquery
 
 
 class BigQuery:
-    def __init__(self, GCP_project="staging-freg-0835"):
+    def __init__(self, GCP_project="dev-freg-3896"):
         self.client = bigquery.Client()
         self.GCP_project = GCP_project
 

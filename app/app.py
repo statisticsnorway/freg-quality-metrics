@@ -23,7 +23,7 @@ kwargs = {"minutes": 1}
 
 # Global variables
 GCP_project = "dev-freg-3896"
-# BQ = BigQuery(GCP_project=GCP_project)
+BQ = BigQuery(GCP_project=GCP_project)
 METRIC_PREFIX = "freg_"
 
 # Flask setup
@@ -47,14 +47,143 @@ logger.handlers[0].setFormatter(formatter)
 
 # Metrics dictionary setup
 graphs = {}
-metric_key = f"{METRIC_PREFIX}some_random_number"
-graphs[metric_key] = prometheus_client.Gauge(
-    metric_key, "Some random number")
+metrics_key = f"{METRIC_PREFIX}some_random_number"
+graphs[metrics_key] = prometheus_client.Gauge(
+    metrics_key, "Some random number")
 
 
 def generate_random_number() -> None:
-    mkey = f"{METRIC_PREFIX}some_random_number"
-    graphs[mkey].set(random.random())
+    metric_key = f"{METRIC_PREFIX}some_random_number"
+    graphs[metric_key].set(random.random())
+    return None
+
+
+def count_total_and_distinct(
+    database="inndata",
+    table="v_identifikasjonsnummer",
+    column="folkeregisteridentifikator",
+) -> None:
+    """
+    Trigger an API request to BigQuery, where we find:
+    * Total number of rows in a table.
+    * Unique number of rows in a table based on the uniqueness of a column.
+
+    Then, these metrics are stored as prometheus Gauges within the graphs dictionary.
+    """
+    # Read from BigQuery
+    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
+    graphs[metric_key].inc()
+    result = BQ.count_total_and_uniques(database=database, table=table, column=column)
+
+    # Create and set Prometheus variables
+    for key, val in result.items():
+        metric_key = f"{METRIC_PREFIX}{key}_rows_in_{table}"
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The {key} number of rows "
+                f"in BigQuery table {GCP_project}.{database}.{table}.",
+            )
+        graphs[metric_key].set(val)
+
+    return None
+
+
+def check_valid_and_invalid_fnr(
+    database="inndata", table="v_identifikasjonsnummer"
+) -> None:
+    """
+    Check the number of valid fnr and dnr in BigQuery database. If the numbers
+    are invalid, then they are categorized as either (prioritized order):
+    * 'format' (wrong format, i.e., not 11 digits).
+    * 'date' (invalid date, also accounts for dnr).
+    * 'control' (invalid control digits, i.e., the two last digits).
+    """
+    # Read from BigQuery
+    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
+    graphs[metric_key].inc()
+    result = BQ.valid_and_invalid_fnr(database=database, table=table)
+
+    # Create and set Prometheus variables
+    for key, val in result.items():
+        metric_key = f"{METRIC_PREFIX}{key}"
+        if not metric_key in graphs:  # (result dict has sufficiently descriptive keys)
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of records with {key}"
+                f"in BigQuery table {GCP_project}.{database}.{table}.",
+            )
+        graphs[metric_key].set(val)
+
+    return None
+
+
+def group_by_and_count(database="inndata", table="v_status", column="status") -> None:
+    # Read from BigQuery
+    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
+    graphs[metric_key].inc()
+    result = BQ.group_by_and_count(database=database, table=table, column=column)
+
+    map_group_by_result_to_metric(
+        result=result, database=database, table=table, column=column
+    )
+
+    return None
+
+
+def count_hendelsetype() -> None:
+    # Read from BigQuery
+    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
+    graphs[metric_key].inc()
+    result = BQ.count_hendelsetype()
+
+    map_group_by_result_to_metric(
+        result=result,
+        database="kildedata",
+        table="hendelse_persondok",
+        column="hendelsetype",
+    )
+
+    return None
+
+
+def map_group_by_result_to_metric(
+    result, database="inndata", table="v_status", column="status"
+) -> None:
+    # Create and set Prometheus variables
+    for key, val in result.items():
+        metric_key = f"{METRIC_PREFIX}{column}"
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of rows for {column} "
+                f"in BigQuery table {GCP_project}.{database}.{table}.",
+                ["kode"],
+            )
+        graphs[metric_key].labels(kode=f"{key}")  # Initialize label
+        graphs[metric_key].labels(kode=f"{key}").set(val)
+
+    return None
+
+
+def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> None:
+    metric_key = f"{METRIC_PREFIX}latest_md_timestamp_{table}"
+    if not metric_key in graphs:
+        graphs[metric_key] = prometheus_client.Info(
+            metric_key,
+            "The latest md_timestamp "
+            f"in BigQuery table {GCP_project}.{database}.{table}",
+        )
+
+    # Read from BigQuery
+    result = BQ.latest_timestamp(database=database, table=table)
+
+    # Result is a dictionary, where key=table, value=latest_timestamp_for_table
+    graphs[metric_key].info(result)
+
+    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
+    graphs[metric_key].inc()
+
     return None
 
 
@@ -64,6 +193,24 @@ scheduler = BackgroundScheduler()
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
     lambda: generate_random_number(),
+    "interval",
+    **kwargs,
+)
+
+# Count total/unique folkeregisteridentifikator
+scheduler.add_job(
+    lambda: count_total_and_distinct(
+        database="inndata",
+        table="v_identifikasjonsnummer",
+        column="folkeregisteridentifikator",
+    ),
+    "interval",
+    **kwargs,
+)
+
+# Count hendelsestype
+scheduler.add_job(
+    lambda: count_hendelsetype(),
     "interval",
     **kwargs,
 )

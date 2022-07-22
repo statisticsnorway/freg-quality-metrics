@@ -47,13 +47,19 @@ logger.handlers[0].setFormatter(formatter)
 
 # Metrics dictionary setup
 graphs = {}
-metrics_key = f"{METRIC_PREFIX}some_random_number"
+metrics_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
 graphs[metrics_key] = prometheus_client.Gauge(
-    metrics_key, "Some random number")
+    metrics_key, "The total number of API calls to BigQuery."
+)
 
 
 def generate_random_number() -> None:
     metric_key = f"{METRIC_PREFIX}some_random_number"
+    if not metric_key in graphs:
+        graphs[metric_key] = prometheus_client.Gauge(
+            metric_key,
+            "Some random number",
+        )
     graphs[metric_key].set(random.random())
     return None
 
@@ -215,6 +221,10 @@ scheduler.add_job(
     **kwargs,
 )
 """
+
+# Latest timestamp
+scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
+
 
 @app.route("/health/ready")
 def ready():

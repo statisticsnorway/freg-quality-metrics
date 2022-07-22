@@ -196,7 +196,7 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
-
+"""
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
     lambda: count_total_and_distinct(
@@ -214,7 +214,7 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
-
+"""
 
 @app.route("/health/ready")
 def ready():

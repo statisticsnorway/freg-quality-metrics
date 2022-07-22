@@ -7,7 +7,7 @@ from google.cloud import bigquery
 
 class BigQuery:
     def __init__(self, GCP_project="dev-freg-3896"):
-        self.client = bigquery.Client()
+        self.client = bigquery.Client(project=GCP_project)
         self.GCP_project = GCP_project
 
     def _query_job_dataframe(self, query: str) -> pandas.DataFrame:

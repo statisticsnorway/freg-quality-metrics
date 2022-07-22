@@ -213,17 +213,17 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
-
+"""
 # Count hendelsestype
 scheduler.add_job(
     lambda: count_hendelsetype(),
     "interval",
     **kwargs,
 )
-"""
+
 
 # Latest timestamp
-scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
+# scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
 
 
 @app.route("/health/ready")

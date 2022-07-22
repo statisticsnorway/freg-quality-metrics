@@ -15,6 +15,7 @@ prometheus-client = "^0.14.1"
 pandas = "^1.4.3"
 bigquery = "^0.0.21"
 uWSGI = "^2.0.20"
+APScheduler = "^3.9.1"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.19.0"

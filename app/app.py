@@ -12,6 +12,7 @@ import prometheus_client
 # Local class for calling our BigQuery databases
 from api.bigquery import BigQuery
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.background import BlockingScheduler
 
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
@@ -19,7 +20,7 @@ from flask import Flask, Response
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 # Scheduler: keyword arguments (how often to trigger)
-kwargs = {"minutes": 5}
+kwargs = {"minutes": 1}
 
 # Environment variables
 GCP_project = os.environ.get("GCP_PROJECT", "dev-freg-3896")
@@ -194,7 +195,8 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
 
 
 # Scheduling of function triggers
-scheduler = BackgroundScheduler()
+#scheduler = BackgroundScheduler()
+scheduler = BlockingScheduler()
 
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(

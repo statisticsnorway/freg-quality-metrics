@@ -6,7 +6,7 @@ import atexit
 
 # Prometheus utilities
 import random
-
+import os
 import prometheus_client
 
 # Local class for calling our BigQuery databases
@@ -21,8 +21,8 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 # Scheduler: keyword arguments (how often to trigger)
 kwargs = {"minutes": 1}
 
-# Global variables
-GCP_project = "dev-freg-3896"
+# Environment variables
+GCP_project = os.environ.get("GCP_PROJECT", "dev-freg-3896")
 BQ = BigQuery(GCP_project=GCP_project)
 METRIC_PREFIX = "freg_"
 

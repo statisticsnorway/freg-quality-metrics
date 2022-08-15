@@ -2,6 +2,8 @@
 import atexit
 
 # import logging.config
+# import logging
+
 # from pythonjsonlogger import jsonlogger
 
 # Prometheus utilities
@@ -12,7 +14,7 @@ import prometheus_client
 # Local class for calling our BigQuery databases
 from api.bigquery import BigQuery
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.background import BlockingScheduler
+# from apscheduler.schedulers.background import BlockingScheduler
 
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
@@ -33,6 +35,7 @@ app = Flask(__name__)
 app.wsgi_app = DispatcherMiddleware(
     app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()}
 )
+
 """
 # Logging
 # Get the loghandler and rename the field "levelname" to severity
@@ -66,9 +69,9 @@ def generate_random_number() -> None:
 
 
 def count_total_and_distinct(
-    database="inndata",
-    table="v_identifikasjonsnummer",
-    column="folkeregisteridentifikator",
+        database="inndata",
+        table="v_identifikasjonsnummer",
+        column="folkeregisteridentifikator",
 ) -> None:
     """
     Trigger an API request to BigQuery, where we find:
@@ -97,7 +100,7 @@ def count_total_and_distinct(
 
 
 def check_valid_and_invalid_fnr(
-    database="inndata", table="v_identifikasjonsnummer"
+        database="inndata", table="v_identifikasjonsnummer"
 ) -> None:
     """
     Check the number of valid fnr and dnr in BigQuery database. If the numbers
@@ -155,7 +158,7 @@ def count_hendelsetype() -> None:
 
 
 def map_group_by_result_to_metric(
-    result, database="inndata", table="v_status", column="status"
+        result, database="inndata", table="v_status", column="status"
 ) -> None:
     # Create and set Prometheus variables
     for key, val in result.items():
@@ -195,8 +198,8 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
 
 
 # Scheduling of function triggers
-#scheduler = BackgroundScheduler()
-scheduler = BlockingScheduler()
+scheduler = BackgroundScheduler()
+# scheduler = BlockingScheduler()
 
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
@@ -205,6 +208,7 @@ scheduler.add_job(
     **kwargs,
 )
 
+"""
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
     lambda: count_total_and_distinct(
@@ -247,6 +251,7 @@ scheduler.add_job(
     "interval",
     **kwargs,
 )
+"""
 
 # Latest timestamp
 scheduler.add_job(get_latest_timestamp, "interval", **kwargs)

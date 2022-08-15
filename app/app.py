@@ -208,7 +208,6 @@ scheduler.add_job(
     **kwargs,
 )
 
-"""
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
     lambda: count_total_and_distinct(
@@ -220,6 +219,7 @@ scheduler.add_job(
     **kwargs,
 )
 
+"""
 # Count how many with each status
 scheduler.add_job(
     lambda: group_by_and_count(database="inndata", table="v_status", column="status"),

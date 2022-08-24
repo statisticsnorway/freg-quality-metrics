@@ -41,11 +41,15 @@ WORKDIR /app
 COPY ./bin/run.sh /app/bin/run.sh
 COPY ./api /app/api
 COPY ./app /app
+COPY ./service-key-staging.json /app/service-key.json
+
 
 # Create a non-root user
 RUN useradd -ms /bin/bash aurora
 
 #USER 9000
 
+ENV PROJECT_ID=staging-freg-0835
+ENV GOOGLE_APPLICATION_CREDENTIALS=service-key.json
 EXPOSE 8080
 ENTRYPOINT ["bash", "/app/bin/run.sh"]

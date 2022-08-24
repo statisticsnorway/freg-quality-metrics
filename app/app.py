@@ -11,7 +11,6 @@ logger.debug("Logging is configured.")
 # from pythonjsonlogger import jsonlogger
 
 # Prometheus utilities
-import random
 import os
 import prometheus_client
 
@@ -44,36 +43,18 @@ app.wsgi_app = DispatcherMiddleware(
     app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()}
 )
 
-"""
-# Logging
-# Get the loghandler and rename the field "levelname" to severity
-# for correct display of log level in Google Logging
-logger = logging.getLogger()
-handler = logger.handlers[0]
-formatter = jsonlogger.JsonFormatter(
-    "%(asctime)s %(levelname)s %(threadName) %(module) %(funcName)s %(lineno)d  %(message)s",
-    rename_fields={"levelname": "severity"},
-)
-logger.handlers[0].setFormatter(formatter)
-"""
 
 # Metrics dictionary setup
 graphs = {}
-metrics_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-graphs[metrics_key] = prometheus_client.Gauge(
-    metrics_key, "The total number of API calls to BigQuery."
-)
 
 
-def generate_random_number() -> None:
-    logger.debug('Generating random number.')
-    metric_key = f"{METRIC_PREFIX}some_random_number"
+def metrics_count_calls() -> None:
+    metric_key = f"{METRIC_PREFIX}metrics_calls_to_bigquery"
     if not metric_key in graphs:
         graphs[metric_key] = prometheus_client.Gauge(
-            metric_key,
-            "Some random number",
+            metric_key, "The total number of calls to BigQuery."
         )
-    graphs[metric_key].set(random.random())
+    graphs[metric_key].inc()
     return None
 
 
@@ -91,8 +72,7 @@ def count_total_and_distinct(
     """
     # Read from BigQuery
     logger.debug('Submitting count_total_and_uniques query to BigQuery.')
-    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-    graphs[metric_key].inc()
+    metrics_count_calls()
     result = BQ.count_total_and_uniques(database=database, table=table, column=column)
 
     # Create and set Prometheus variables
@@ -121,8 +101,7 @@ def check_valid_and_invalid_fnr(
     """
     # Read from BigQuery
     logger.debug('Submitting valid_and_invalid_fnr query to BigQuery.')
-    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-    graphs[metric_key].inc()
+    metrics_count_calls()
     result = BQ.valid_and_invalid_fnr(database=database, table=table)
 
     # Create and set Prometheus variables
@@ -131,7 +110,7 @@ def check_valid_and_invalid_fnr(
         if not metric_key in graphs:  # (result dict has sufficiently descriptive keys)
             graphs[metric_key] = prometheus_client.Gauge(
                 metric_key,
-                f"The number of records with {key}"
+                f"The number of records with {key} "
                 f"in BigQuery table {GCP_project}.{database}.{table}.",
             )
         graphs[metric_key].set(val)
@@ -142,8 +121,7 @@ def check_valid_and_invalid_fnr(
 def group_by_and_count(database="inndata", table="v_status", column="status") -> None:
     # Read from BigQuery
     logger.debug('Submitting group_by_and_count query to BigQuery.')
-    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-    graphs[metric_key].inc()
+    metrics_count_calls()
     result = BQ.group_by_and_count(database=database, table=table, column=column)
 
     map_group_by_result_to_metric(
@@ -156,8 +134,7 @@ def group_by_and_count(database="inndata", table="v_status", column="status") ->
 def count_hendelsetype() -> None:
     # Read from BigQuery
     logger.debug('Submitting count_hendelsetype query to BigQuery.')
-    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-    graphs[metric_key].inc()
+    metrics_count_calls()
     result = BQ.count_hendelsetype()
 
     map_group_by_result_to_metric(
@@ -200,13 +177,11 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
 
     # Read from BigQuery
     logger.debug('Submitting latest_timestamp query to BigQuery.')
+    metrics_count_calls()
     result = BQ.latest_timestamp(database=database, table=table)
 
     # Result is a dictionary, where key=table, value=latest_timestamp_for_table
     graphs[metric_key].info(result)
-
-    metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
-    graphs[metric_key].inc()
 
     return None
 
@@ -214,15 +189,7 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
 # Scheduling of function triggers
 logger.debug('Configuring job scheduler.')
 scheduler = BackgroundScheduler()
-# scheduler = BlockingScheduler()
 
-# Count total/unique folkeregisteridentifikator
-scheduler.add_job(
-    lambda: generate_random_number(),
-    "interval",
-    name = "generate_random_number",
-    **kwargs,
-)
 
 # Count total/unique folkeregisteridentifikator
 scheduler.add_job(
@@ -232,7 +199,7 @@ scheduler.add_job(
         column="folkeregisteridentifikator",
     ),
     "interval",
-    name = "count_total_and_distinct",
+    name = "count_total_and_distinct_fnr",
     **kwargs,
 )
 

@@ -1,3 +1,7 @@
+import logging
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
+
 import re
 from datetime import datetime
 
@@ -16,6 +20,7 @@ class BigQuery:
         Parameters: query string.
         Returns: pandas dataframe.
         """
+        logger.debug('Retrieving query and converting to dataframe.')
         return self.client.query(query).result().to_dataframe()
 
     def _valid_fnr_or_dnr(self, number):

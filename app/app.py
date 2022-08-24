@@ -1,8 +1,12 @@
 # Scheduled triggering of functions
 import atexit
 
-# import logging.config
-# import logging
+import logging.config
+import logging
+logging.config.fileConfig('logging.config')
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
+
 
 # from pythonjsonlogger import jsonlogger
 
@@ -30,8 +34,10 @@ BQ = BigQuery(GCP_project=GCP_project)
 METRIC_PREFIX = "freg_"
 
 # Flask setup
+logger.info('Initialising Flask app.')
 app = Flask(__name__)
 # csrf = CSRFProtect(app)
+logger.debug('Setting up prometheus client.')
 app.wsgi_app = DispatcherMiddleware(
     app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()}
 )
@@ -58,6 +64,7 @@ graphs[metrics_key] = prometheus_client.Gauge(
 
 
 def generate_random_number() -> None:
+    logger.debug('Generating random number.')
     metric_key = f"{METRIC_PREFIX}some_random_number"
     if not metric_key in graphs:
         graphs[metric_key] = prometheus_client.Gauge(
@@ -81,6 +88,7 @@ def count_total_and_distinct(
     Then, these metrics are stored as prometheus Gauges within the graphs dictionary.
     """
     # Read from BigQuery
+    logger.debug('Submitting count_total_and_uniques query to BigQuery.')
     metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
     graphs[metric_key].inc()
     result = BQ.count_total_and_uniques(database=database, table=table, column=column)
@@ -110,6 +118,7 @@ def check_valid_and_invalid_fnr(
     * 'control' (invalid control digits, i.e., the two last digits).
     """
     # Read from BigQuery
+    logger.debug('Submitting valid_and_invalid_fnr query to BigQuery.')
     metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
     graphs[metric_key].inc()
     result = BQ.valid_and_invalid_fnr(database=database, table=table)
@@ -130,6 +139,7 @@ def check_valid_and_invalid_fnr(
 
 def group_by_and_count(database="inndata", table="v_status", column="status") -> None:
     # Read from BigQuery
+    logger.debug('Submitting group_by_and_count query to BigQuery.')
     metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
     graphs[metric_key].inc()
     result = BQ.group_by_and_count(database=database, table=table, column=column)
@@ -143,6 +153,7 @@ def group_by_and_count(database="inndata", table="v_status", column="status") ->
 
 def count_hendelsetype() -> None:
     # Read from BigQuery
+    logger.debug('Submitting count_hendelsetype query to BigQuery.')
     metric_key = f"{METRIC_PREFIX}number_of_calls_to_bigquery"
     graphs[metric_key].inc()
     result = BQ.count_hendelsetype()
@@ -186,6 +197,7 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
         )
 
     # Read from BigQuery
+    logger.debug('Submitting latest_timestamp query to BigQuery.')
     result = BQ.latest_timestamp(database=database, table=table)
 
     # Result is a dictionary, where key=table, value=latest_timestamp_for_table
@@ -198,6 +210,7 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
 
 
 # Scheduling of function triggers
+logger.debug('Configuring job scheduler.')
 scheduler = BackgroundScheduler()
 # scheduler = BlockingScheduler()
 
@@ -205,6 +218,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(
     lambda: generate_random_number(),
     "interval",
+    name = "generate_random_number",
     **kwargs,
 )
 
@@ -216,14 +230,15 @@ scheduler.add_job(
         column="folkeregisteridentifikator",
     ),
     "interval",
+    name = "count_total_and_distinct",
     **kwargs,
 )
 
-"""
 # Count how many with each status
 scheduler.add_job(
     lambda: group_by_and_count(database="inndata", table="v_status", column="status"),
     "interval",
+    name = "group_by_and_count_status",
     **kwargs,
 )
 
@@ -233,12 +248,14 @@ scheduler.add_job(
         database="inndata", table="v_sivilstand", column="sivilstand"
     ),
     "interval",
+    name = "group_by_and_count_sivilstand",
     **kwargs,
 )
 
 scheduler.add_job(
     lambda: count_hendelsetype(),
     "interval",
+    name = "count_hendelsetype",
     **kwargs,
 )
 
@@ -249,12 +266,17 @@ scheduler.add_job(
         table="v_identifikasjonsnummer",
     ),
     "interval",
+    name = "check_valid_and_invalid_fnr",
     **kwargs,
 )
-"""
 
 # Latest timestamp
-scheduler.add_job(get_latest_timestamp, "interval", **kwargs)
+scheduler.add_job(
+    get_latest_timestamp,
+    "interval",
+    name = "get_latest_timestamp",
+    **kwargs
+)
 
 
 @app.route("/health/ready")
@@ -268,13 +290,12 @@ def alive():
     """Tells whether or not the app is alive"""
     return "Alive!"
 
-"""
 @app.route("/")
 def app_startup():
-    scheduler.start()
-    atexit.register(lambda: scheduler.shutdown())
+    # scheduler.start()
+    # atexit.register(lambda: scheduler.shutdown())
     return "Hurray!"
-"""
+
 
 # Start/shutdown
 scheduler.start()

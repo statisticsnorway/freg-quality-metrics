@@ -25,8 +25,10 @@ from flask import Flask, Response
 # from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
+import datetime
+
 # Scheduler: keyword arguments (how often to trigger)
-kwargs = {"minutes": 5}
+kwargs = {"minutes": 5, "next_run_time": datetime.datetime.now()}
 
 # Environment variables
 GCP_project = os.environ.get("GCP_PROJECT", "dev-freg-3896")

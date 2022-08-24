@@ -42,6 +42,7 @@ COPY ./bin/run.sh /app/bin/run.sh
 COPY ./api /app/api
 COPY ./app /app
 
+
 # Create a non-root user
 RUN useradd -ms /bin/bash aurora
 

@@ -132,3 +132,13 @@ index.pb
 .idea
 *.iml
 .vscode/
+
+# VSCode workspace settings
+*.code-workspace
+
+# service-keys
+service*.json
+
+
+# Temporary dev dockerfile
+Dockerfile-dev.dockerfile

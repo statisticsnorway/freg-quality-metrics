@@ -1,4 +1,7 @@
-import re
+import logging
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
+
 from datetime import datetime
 
 import pandas
@@ -16,6 +19,7 @@ class BigQuery:
         Parameters: query string.
         Returns: pandas dataframe.
         """
+        logger.debug('Retrieving query and converting to dataframe.')
         return self.client.query(query).result().to_dataframe()
 
     def _valid_fnr_or_dnr(self, number):
@@ -45,8 +49,7 @@ class BigQuery:
             * 'control' (wrong control digits)
         """
         # Check if number is a string of 11 digits
-        pattern = re.compile(r"\d{11}")
-        if not pattern.match(number):
+        if not (number.isdigit() & (len(number) == 11)):
             return False, "format"
 
         # Fnr or Dnr?
@@ -59,7 +62,7 @@ class BigQuery:
         try:
             day = int(number[0:2])
             if no_type == "dnr":
-                day -= 30
+                day -= 40
             month = int(number[2:4])
             year = int(number[4:6])
             d = datetime(year=year, month=month, day=day)

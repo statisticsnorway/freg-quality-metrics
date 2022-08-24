@@ -26,7 +26,7 @@ from flask import Flask, Response
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 # Scheduler: keyword arguments (how often to trigger)
-kwargs = {"minutes": 1}
+kwargs = {"minutes": 5}
 
 # Environment variables
 GCP_project = os.environ.get("GCP_PROJECT", "dev-freg-3896")

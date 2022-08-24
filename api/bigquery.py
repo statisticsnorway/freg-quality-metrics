@@ -2,7 +2,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
-import re
 from datetime import datetime
 
 import pandas
@@ -50,8 +49,7 @@ class BigQuery:
             * 'control' (wrong control digits)
         """
         # Check if number is a string of 11 digits
-        pattern = re.compile(r"\d{11}")
-        if not pattern.match(number):
+        if not (number.isdigit() & (len(number) == 11)):
             return False, "format"
 
         # Fnr or Dnr?

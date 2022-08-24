@@ -62,7 +62,7 @@ class BigQuery:
         try:
             day = int(number[0:2])
             if no_type == "dnr":
-                day -= 30
+                day -= 40
             month = int(number[2:4])
             year = int(number[4:6])
             d = datetime(year=year, month=month, day=day)

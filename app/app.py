@@ -264,7 +264,7 @@ scheduler.add_job(
     **kwargs,
 )
 
-# Count how many with each sivilstand
+"""
 scheduler.add_job(
     lambda: check_valid_and_invalid_fnr(
         database="inndata",
@@ -274,6 +274,7 @@ scheduler.add_job(
     name = "check_valid_and_invalid_fnr",
     **kwargs,
 )
+"""
 
 # Latest timestamp
 scheduler.add_job(

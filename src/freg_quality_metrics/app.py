@@ -1,9 +1,9 @@
 # Scheduled triggering of functions
 import atexit
 
-import logging.config
+from freg_quality_metrics import config
+
 import logging
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
@@ -15,7 +15,7 @@ import os
 import prometheus_client
 
 # Local class for calling our BigQuery databases
-from api.bigquery import BigQuery
+from freg_quality_metrics.api.bigquery import BigQuery
 from apscheduler.schedulers.background import BackgroundScheduler
 # from apscheduler.schedulers.background import BlockingScheduler
 

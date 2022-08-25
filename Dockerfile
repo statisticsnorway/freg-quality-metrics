@@ -31,6 +31,8 @@ RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poet
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
+RUN mkdir ./src
+COPY ./src ./src
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 RUN poetry install --no-dev
@@ -39,8 +41,7 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY ./bin/run.sh /app/bin/run.sh
-COPY ./api /app/api
-COPY ./app /app
+COPY ./src/freg_quality_metrics/app.py /app
 
 
 # Create a non-root user

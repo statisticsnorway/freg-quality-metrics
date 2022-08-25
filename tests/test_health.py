@@ -4,14 +4,8 @@ from unittest.mock import patch, MagicMock
 
 logger = logging.getLogger(__name__)
 
-@pytest.fixture(scope='session')
-def mock_bigquery_client():
-    mock_client = MagicMock()
-    with patch('google.cloud.bigquery.Client', autospec=False):
-        yield mock_client
-
-@pytest.fixture(scope='session')
-def client(mock_bigquery_client):
+@pytest.fixture(scope='module')
+def client(bigquery_client):
     from freg_quality_metrics.app import app as api
     client = api.test_client()
     return client

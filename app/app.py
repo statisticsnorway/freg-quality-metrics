@@ -288,13 +288,14 @@ scheduler.add_job(
 @app.route("/health/ready")
 def ready():
     """Tells whether or not the app is ready to receive requests"""
-    return "Ready!"
+    return Response(status=200)
 
 
 @app.route("/health/alive")
 def alive():
     """Tells whether or not the app is alive"""
-    return "Alive!"
+    return Response(status=200)
+
 
 @app.route("/")
 def app_startup():

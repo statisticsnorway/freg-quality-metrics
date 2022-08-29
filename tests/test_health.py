@@ -20,7 +20,6 @@ def test_ready(client):
     """Tests the ready endpoint. Is always 200 for now"""
     response = client.get("/health/ready")
     assert response.status_code == 200
-    assert response.text == "Ready!"
 
 
 def test_alive(client):

@@ -6,15 +6,9 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope='module')
 def client(bigquery_client):
-    from freg_quality_metrics.app import app as api
-    client = api.test_client()
+    from freg_quality_metrics import create_app
+    client = create_app().test_client()
     return client
-
-# from api import bigquery
-
-
-# from app.app import app as api
-# client = api.test_client()
 
 def test_ready(client):
     """Tests the ready endpoint. Is always 200 for now"""

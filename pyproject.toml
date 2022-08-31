@@ -5,7 +5,7 @@ description = "Quality-metrics for FREG"
 authors = ["Ole Bredesen-Vestby <obv@ssb.no>"]
 
 packages = [
-    { include = "freg_quality_metrics", from = "src" },
+    { include = "freg_quality_metrics" },
 ]
 
 [tool.poetry.dependencies]

@@ -53,7 +53,6 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
-    """
     scheduler.add_job(
         lambda: metrics.check_valid_and_invalid_fnr(
             database="inndata",
@@ -63,7 +62,6 @@ def configure_scheduler(**kwargs):
         name = "check_valid_and_invalid_fnr",
         **kwargs,
     )
-    """
 
     # Latest timestamp
     scheduler.add_job(

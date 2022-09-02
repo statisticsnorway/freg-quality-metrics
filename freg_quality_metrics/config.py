@@ -2,7 +2,7 @@ import os
 
 # Configure application path
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-METRIC_PREFIX = 'freg'
+METRIC_PREFIX = 'freg_'
 GCP_PROJECT = os.environ.get("GCP_PROJECT", "dev-freg-3896")
 
 def configure_logging():

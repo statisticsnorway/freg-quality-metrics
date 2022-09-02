@@ -125,4 +125,4 @@ jobs:
   # See https://github.com/statisticsnorway/azure-pipelines-templates/blob/master/docker/docker-tag-for-production.yml
   - template: docker/docker-tag-for-production.yml@templates
     parameters:
-      tagToTag: 'main-$(Build.SourceVersion)'
+      tagToTag: 'main-$(fullSha)'

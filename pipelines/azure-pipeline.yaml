@@ -126,3 +126,4 @@ jobs:
   - template: docker/docker-tag-for-production.yml@templates
     parameters:
       tagToTag: 'main-$(fullSha)'
+      gcrImageName: $(imageName)

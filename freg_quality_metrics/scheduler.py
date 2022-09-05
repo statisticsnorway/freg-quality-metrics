@@ -24,7 +24,29 @@ def configure_scheduler(**kwargs):
             column="folkeregisteridentifikator",
         ),
         "interval",
-        name = "count_total_and_distinct_fnr",
+        name = "count_total_and_distinct_fnr_inndata",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.count_total_and_distinct(
+            database="historikk",
+            table="v_identifikasjonsnummer",
+            column="folkeregisteridentifikator",
+        ),
+        "interval",
+        name = "count_total_and_distinct_fnr_historikk",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.count_total_and_distinct(
+            database="kildedata",
+            table="hendelse_persondok",
+            column="folkeregisteridentifikator",
+        ),
+        "interval",
+        name = "count_total_and_distinct_fnr_kildedata",
         **kwargs,
     )
 
@@ -59,7 +81,26 @@ def configure_scheduler(**kwargs):
             table="v_identifikasjonsnummer",
         ),
         "interval",
-        name = "check_valid_and_invalid_fnr",
+        name = "check_valid_and_invalid_fnr_inndata",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.check_valid_and_invalid_fnr(
+            database="historikk",
+            table="v_identifikasjonsnummer",
+        ),
+        "interval",
+        name = "check_valid_and_invalid_fnr_historikk",
+        **kwargs,
+    )
+    scheduler.add_job(
+        lambda: metrics.check_valid_and_invalid_fnr(
+            database="kildedata",
+            table="hendelse_persondok",
+        ),
+        "interval",
+        name = "check_valid_and_invalid_fnr_kildedata",
         **kwargs,
     )
 

@@ -22,7 +22,7 @@ RUN apt-get update \
   && ln -s /usr/bin/python3 python \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/src/app
+WORKDIR /usr/app
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -33,14 +33,17 @@ WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
+RUN poetry install --no-dev --no-root
+
+RUN mkdir freg_quality_metrics
+COPY freg_quality_metrics freg_quality_metrics
 RUN poetry install --no-dev
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY ./bin/run.sh /app/bin/run.sh
-COPY ./api /app/api
-COPY ./app /app
+COPY run.py /app
 
 
 # Create a non-root user

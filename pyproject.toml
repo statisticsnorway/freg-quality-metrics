@@ -1,8 +1,12 @@
 [tool.poetry]
-name = "freg-quality-metrics"
+name = "freg_quality_metrics"
 version = "0.1.1"
 description = "Quality-metrics for FREG"
 authors = ["Ole Bredesen-Vestby <obv@ssb.no>"]
+
+packages = [
+    { include = "freg_quality_metrics" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"

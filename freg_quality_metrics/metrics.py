@@ -1,53 +1,32 @@
-# Scheduled triggering of functions
-import atexit
-
-import logging.config
 import logging
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
-
-# from pythonjsonlogger import jsonlogger
-
-# Prometheus utilities
-import os
-import prometheus_client
-
-# Local class for calling our BigQuery databases
-from api.bigquery import BigQuery
-from apscheduler.schedulers.background import BackgroundScheduler
-# from apscheduler.schedulers.background import BlockingScheduler
-
-# Flask (webapp library) and flask-related dispatcher
-from flask import Flask, Response
-# from flask_wtf.csrf import CSRFProtect
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from flask import Flask
 
 import datetime
+import prometheus_client
+from .config import METRIC_PREFIX, GCP_PROJECT
 
-# Scheduler: keyword arguments (how often to trigger)
-kwargs = {"minutes": 5, "next_run_time": datetime.datetime.now()}
-
-# Environment variables
-GCP_project = os.environ.get("GCP_PROJECT", "dev-freg-3896")
-BQ = BigQuery(GCP_project=GCP_project)
-METRIC_PREFIX = "freg_"
-
-# Flask setup
-logger.info('Initialising Flask app.')
-app = Flask(__name__)
-# csrf = CSRFProtect(app)
-logger.debug('Setting up prometheus client.')
-app.wsgi_app = DispatcherMiddleware(
-    app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()}
-)
+from .bigquery import BigQuery
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 
 # Metrics dictionary setup
 graphs = {}
 graphs["freg_metrics_interval"] = prometheus_client.Gauge("freg_metrics_interval", "Interval of metrics scheduler")
-graphs["freg_metrics_interval"].set(kwargs["minutes"])
+
+BQ = BigQuery(GCP_project=GCP_PROJECT)
+
+def configure_prometheus(app: Flask, **kwargs):
+
+    # csrf = CSRFProtect(app)
+    logger.debug('Setting up prometheus client.')
+    app.wsgi_app = DispatcherMiddleware(
+        app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()}
+    )
+    graphs["freg_metrics_interval"].set(kwargs["minutes"])
+
 
 
 def metrics_count_calls() -> None:
@@ -133,7 +112,7 @@ def check_valid_and_invalid_fnr(
             graphs[metric_key] = prometheus_client.Gauge(
                 metric_key,
                 f"The number of records with {key} "
-                f"in BigQuery table {GCP_project}.{database}.{table}.",
+                f"in BigQuery table {GCP_PROJECT}.{database}.{table}.",
             )
         graphs[metric_key].set(val)
 
@@ -205,7 +184,7 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
         graphs[metric_key] = prometheus_client.Info(
             metric_key,
             "The latest md_timestamp "
-            f"in BigQuery table {GCP_project}.{database}.{table}",
+            f"in BigQuery table {GCP_PROJECT}.{database}.{table}",
         )
 
     # Read from BigQuery
@@ -220,90 +199,3 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> No
     end = datetime.datetime.now()
     metrics_time_used("get_latest_timestamp", database, table, "", start, end)
     return None
-
-
-# Scheduling of function triggers
-logger.debug('Configuring job scheduler.')
-scheduler = BackgroundScheduler()
-
-
-# Count total/unique folkeregisteridentifikator
-scheduler.add_job(
-    lambda: count_total_and_distinct(
-        database="inndata",
-        table="v_identifikasjonsnummer",
-        column="folkeregisteridentifikator",
-    ),
-    "interval",
-    name = "count_total_and_distinct_fnr",
-    **kwargs,
-)
-
-# Count how many with each status
-scheduler.add_job(
-    lambda: group_by_and_count(database="inndata", table="v_status", column="status"),
-    "interval",
-    name = "group_by_and_count_status",
-    **kwargs,
-)
-
-# Count how many with each sivilstand
-scheduler.add_job(
-    lambda: group_by_and_count(
-        database="inndata", table="v_sivilstand", column="sivilstand"
-    ),
-    "interval",
-    name = "group_by_and_count_sivilstand",
-    **kwargs,
-)
-
-scheduler.add_job(
-    lambda: count_hendelsetype(),
-    "interval",
-    name = "count_hendelsetype",
-    **kwargs,
-)
-
-"""
-scheduler.add_job(
-    lambda: check_valid_and_invalid_fnr(
-        database="inndata",
-        table="v_identifikasjonsnummer",
-    ),
-    "interval",
-    name = "check_valid_and_invalid_fnr",
-    **kwargs,
-)
-"""
-
-# Latest timestamp
-scheduler.add_job(
-    get_latest_timestamp,
-    "interval",
-    name = "get_latest_timestamp",
-    **kwargs
-)
-
-
-@app.route("/health/ready")
-def ready():
-    """Tells whether or not the app is ready to receive requests"""
-    return Response(status=200)
-
-
-@app.route("/health/alive")
-def alive():
-    """Tells whether or not the app is alive"""
-    return Response(status=200)
-
-
-@app.route("/")
-def app_startup():
-    # scheduler.start()
-    # atexit.register(lambda: scheduler.shutdown())
-    return "Hurray!"
-
-
-# Start/shutdown
-scheduler.start()
-atexit.register(lambda: scheduler.shutdown())

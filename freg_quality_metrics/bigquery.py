@@ -22,74 +22,6 @@ class BigQuery:
         logger.debug('Retrieving query and converting to dataframe.')
         return self.client.query(query).result().to_dataframe()
 
-    def _valid_fnr_or_dnr(self, number):
-        """
-        Description
-        -----------
-        Check the validity of a fnr or dnr:
-        * Check format (11 digits).
-        * Check control digits (2 last digits).
-        * Check valid date (including D numbers).
-        * Check if it is fnr or dnr.
-
-        Parameters
-        ----------
-        number: str of ints, should be 11 digits.
-
-        Returns
-        -------
-        bool: True if valid number, False if not.
-        str: an explanation to the check.
-            If the number is valid:
-            * 'fnr'
-            * 'dnr'
-            Else (invalid number):
-            * 'format' (not 11 digits)
-            * 'date' (wrong date)
-            * 'control' (wrong control digits)
-        """
-        # Check if number is a string of 11 digits
-        if not (number.isdigit() & (len(number) == 11)):
-            return False, "format"
-
-        # Fnr or Dnr?
-        if int(number[0]) > 3:
-            no_type = "dnr"
-        else:
-            no_type = "fnr"
-
-        # Check date
-        try:
-            day = int(number[0:2])
-            if no_type == "dnr":
-                day -= 40
-            month = int(number[2:4])
-            year = int(number[4:6])
-            d = datetime(year=year, month=month, day=day)
-        except ValueError:
-            return False, f"date"
-
-        # Check control digits
-        def control(weights, number):
-            total = 0
-            for i, w in enumerate(weights):
-                total += w * int(number[i])
-            rest = total % 11
-            if rest == 0:
-                return "0"
-            else:
-                return str(11 - rest)
-
-        # Check control digit 1 (second last)
-        if number[9] != control([3, 7, 6, 1, 8, 9, 4, 5, 2], number):
-            return False, "control"
-
-        # Check control digit 2 (last)
-        if number[10] != control([5, 4, 3, 2, 7, 6, 5, 4, 3, 2], number):
-            return False, "control"
-
-        return True, no_type
-
     def count_total_and_uniques(
         self,
         database="inndata",
@@ -145,37 +77,20 @@ class BigQuery:
             'invalid_control': int (count),
         }
         """
-        query = f"""
-            SELECT 
-                folkeregisteridentifikator AS fnr
-            FROM `{self.GCP_project}.{database}.{table}`
-        """
+        query = self._get_valid_and_invalid_fnr_query(database, table)
+
         df = self._query_job_dataframe(query)
+        df.set_index('label',inplace=True)
+        count = df['count']
         result = {
-            "valid_fnr": 0,
-            "valid_dnr": 0,
-            "invalid_format": 0,
-            "invalid_date": 0,
-            "invalid_control": 0,
+            "valid_fnr": count['fnr'],
+            "valid_dnr": count['dnr'],
+            "invalid_format": count['total_count']-count['valid_format_count'],
+            "invalid_date": count['valid_format_count']-count['valid_date_count'],
+            "invalid_control": count['valid_date_count']-count['valid_control_count']
         }
-
-        # Check all numbers
-        for fnr in df["fnr"]:
-            valid, msg = self._valid_fnr_or_dnr(fnr)
-            if valid:
-                if msg == "fnr":
-                    result["valid_fnr"] += 1
-                elif msg == "dnr":
-                    result["valid_dnr"] += 1
-            else:
-                if msg == "format":
-                    result["invalid_format"] += 1
-                elif msg == "date":
-                    result["invalid_date"] += 1
-                elif msg == "control":
-                    result["invalid_control"] += 1
-
         return result
+
 
     def count_hendelsetype(self) -> dict:
         """
@@ -263,6 +178,64 @@ class BigQuery:
         result[table] = df["latest_timestamp"][0]
         return result
 
+    def _get_valid_and_invalid_fnr_query(self,database: str,table: str) -> str:
+        return f"""
+        WITH
+format_check AS (
+  SELECT folkeregisteridentifikator as fnr FROM `{self.GCP_project}.{database}.{table}`
+  WHERE REGEXP_CONTAINS(folkeregisteridentifikator,"^[0-9]{{11}}$")
+),
+date_input AS (
+    SELECT
+        fnr,
+        CAST(SUBSTR(fnr,5,2) as INT64) AS year_short, 
+        CAST(SUBSTR(fnr,7,3) AS INT64) as id,
+        IF(CAST(SUBSTR(fnr,1,1) AS INT64) > 3,CAST(SUBSTR(fnr,1,2) AS INT64)-40,CAST(SUBSTR(fnr,1,2) AS INT64)) as day,
+        CAST(SUBSTR(fnr,3,2) AS INT64) as month,
+        CAST(SUBSTR(fnr,1,1) AS INT64) <= 3 as is_fnr
+    FROM format_check
+),
+format_year AS (
+  SELECT 
+    CASE
+      WHEN id <= 499 THEN 1900 + year_short
+      WHEN id >= 500 AND id <= 749 AND year_short >= 54 THEN 1800 + year_short
+      WHEN id >= 500 AND id <= 999 AND year_short <=39 THEN 2000 + year_short
+      WHEN id >= 900 AND year_short >= 40 THEN 1900 + year_short
+      ELSE 0
+      END
+    AS year,
+    day, month, fnr, is_fnr
+  FROM date_input
+),
+date_check AS (
+  SELECT is_fnr, fnr
+  FROM format_year
+  WHERE SAFE.DATE(year, month, day) IS NOT NULL
+),
+control_check AS (
+  SELECT 
+    is_fnr
+  FROM date_check
+  WHERE CAST(SUBSTR(fnr,10,1) AS INT64) = MOD(11-MOD(
+    3*CAST(SUBSTR(fnr,1,1) AS INT64)+7*CAST(SUBSTR(fnr,2,1) AS INT64)+6*CAST(SUBSTR(fnr,3,1) AS INT64)
+      +1*CAST(SUBSTR(fnr,4,1) AS INT64)+8*CAST(SUBSTR(fnr,5,1) AS INT64)+9*CAST(SUBSTR(fnr,6,1) AS INT64)
+      +4*CAST(SUBSTR(fnr,7,1) AS INT64)+5*CAST(SUBSTR(fnr,8,1) AS INT64)+2*CAST(SUBSTR(fnr,9,1) AS INT64),11)
+    , 11)
+  AND CAST(SUBSTR(fnr,11,1) AS INT64) = MOD(11-MOD(
+    5*CAST(SUBSTR(fnr,1,1) AS INT64)+4*CAST(SUBSTR(fnr,2,1) AS INT64)+3*CAST(SUBSTR(fnr,3,1) AS INT64)
+      +2*CAST(SUBSTR(fnr,4,1) AS INT64)+7*CAST(SUBSTR(fnr,5,1) AS INT64)+6*CAST(SUBSTR(fnr,6,1) AS INT64)
+      +5*CAST(SUBSTR(fnr,7,1) AS INT64)+4*CAST(SUBSTR(fnr,8,1) AS INT64)+3*CAST(SUBSTR(fnr,9,1) AS INT64)
+      +2*CAST(SUBSTR(fnr,10,1) AS INT64),11)
+    , 11)
+)
+SELECT 'total_count' as label, COUNT(*) as count FROM `{self.GCP_project}.{database}.{table}`
+UNION ALL SELECT 'valid_format_count', COUNT(*) FROM format_check
+UNION ALL SELECT 'valid_control_count', COUNT(*) FROM control_check
+UNION ALL SELECT 'valid_date_count', COUNT(*) FROM date_check
+UNION ALL SELECT 'fnr', COUNT(*) FROM control_check WHERE is_fnr
+UNION ALL SELECT 'dnr', COUNT(*) FROM control_check WHERE NOT is_fnr
+"""
 
 if __name__ == "__main__":
     BQ = BigQuery()

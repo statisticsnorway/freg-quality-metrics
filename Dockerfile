@@ -33,7 +33,7 @@ WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN poetry install --no-dev
+RUN poetry install --no-dev --no-root
 
 RUN mkdir freg_quality_metrics
 COPY freg_quality_metrics freg_quality_metrics

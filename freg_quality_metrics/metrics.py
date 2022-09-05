@@ -111,10 +111,11 @@ def check_valid_and_invalid_fnr(
         if not metric_key in graphs:  # (result dict has sufficiently descriptive keys)
             graphs[metric_key] = prometheus_client.Gauge(
                 metric_key,
-                f"The number of records with {key} "
-                f"in BigQuery table {GCP_PROJECT}.{database}.{table}.",
+                f"The number of records with {key} ",
+                ["database", "table"]
             )
-        graphs[metric_key].set(val)
+        graphs[metric_key].labels(database=f"{database}", table=f"{table}")  # Initialize label
+        graphs[metric_key].labels(database=f"{database}", table=f"{table}").set(val)
 
     end = datetime.datetime.now()
     metrics_time_used("check_valid_and_invalid", database, table, "folkeregisteridentifikator", start, end)

@@ -47,10 +47,18 @@ def metrics_time_used(metricname, database, table, column, start=datetime.dateti
             "Time used to generate metric",
             ["name", "database", "table", "column"]
         )
+        graphs[metric_key].labels(name=f"{metricname}", database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
+
     diff = end - start
     sec = diff.total_seconds()
-    graphs[metric_key].labels(name=f"{metricname}", database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
     graphs[metric_key].labels(name=f"{metricname}", database=f"{database}", table=f"{table}", column=f"{column}").set(sec)
+    return None
+
+
+def count_total_and_distinct_identifikasjonsnummer() -> None:
+    count_total_and_distinct(database="inndata", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
+    count_total_and_distinct(database="historikk", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
+    count_total_and_distinct(database="kildedata", table="hendelse_persondok", column="folkeregisteridentifikator",)
     return None
 
 
@@ -81,11 +89,18 @@ def count_total_and_distinct(
                 f"The {key} number of rows",
                 ["database", "table", "column"]
             )
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
+            graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
         graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").set(val)
 
     end = datetime.datetime.now()
     metrics_time_used(f"count_total_and_distinct", database, table, column, start, end)
+    return None
+
+
+def check_valid_and_invalid_idents() -> None:
+    check_valid_and_invalid_fnr(database="inndata", table="v_identifikasjonsnummer",)
+    check_valid_and_invalid_fnr(database="historikk", table="v_identifikasjonsnummer",)
+    check_valid_and_invalid_fnr(database="kildedata", table="hendelse_persondok",)
     return None
 
 
@@ -114,7 +129,7 @@ def check_valid_and_invalid_fnr(
                 f"The number of records with {key} ",
                 ["database", "table"]
             )
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}")  # Initialize label
+            graphs[metric_key].labels(database=f"{database}", table=f"{table}")  # Initialize label
         graphs[metric_key].labels(database=f"{database}", table=f"{table}").set(val)
 
     end = datetime.datetime.now()
@@ -172,8 +187,8 @@ def map_group_by_result_to_metric(
                 metric_key,
                 f"The number of rows by group",
                 ["group", "database", "table", "column"]
-        )
-        graphs[metric_key].labels(group=f"{key}", database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
+            )
+            graphs[metric_key].labels(group=f"{key}", database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
         graphs[metric_key].labels(group=f"{key}", database=f"{database}", table=f"{table}", column=f"{column}").set(val)
     return None
 
@@ -182,6 +197,7 @@ def get_latest_timestamps() -> None:
     get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S")
     get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="ajourholdstidspunkt", parse_format="%b %e, %Y, %I:%M:%S %p")
     get_latest_timestamp(database="inndata", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
+    get_latest_timestamp(database="historikk", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
     return None
 
 
@@ -193,6 +209,7 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok", colum
             "The latest timestamp ",
             ["database", "table", "column"]
         )
+        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
 
     # Read from BigQuery
     logger.debug(f"Submitting latest_timestamp query for {database}.{table}.{column}")
@@ -201,7 +218,6 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok", colum
     result = BQ.latest_timestamp(database=database, table=table, column=column, parse_format=parse_format)
 
     # Result is a dictionary, where key=table, value=latest_timestamp_for_table
-    graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
     graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").info(result)
 
     end = datetime.datetime.now()

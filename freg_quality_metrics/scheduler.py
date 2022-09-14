@@ -15,38 +15,11 @@ def configure_scheduler(**kwargs):
     logger.debug('Configuring job scheduler.')
     scheduler = BackgroundScheduler()
 
-
     # Count total/unique folkeregisteridentifikator
     scheduler.add_job(
-        lambda: metrics.count_total_and_distinct(
-            database="inndata",
-            table="v_identifikasjonsnummer",
-            column="folkeregisteridentifikator",
-        ),
+        lambda: metrics.count_total_and_distinct_identifikasjonsnummer(),
         "interval",
-        name = "count_total_and_distinct_fnr_inndata",
-        **kwargs,
-    )
-
-    scheduler.add_job(
-        lambda: metrics.count_total_and_distinct(
-            database="historikk",
-            table="v_identifikasjonsnummer",
-            column="folkeregisteridentifikator",
-        ),
-        "interval",
-        name = "count_total_and_distinct_fnr_historikk",
-        **kwargs,
-    )
-
-    scheduler.add_job(
-        lambda: metrics.count_total_and_distinct(
-            database="kildedata",
-            table="hendelse_persondok",
-            column="folkeregisteridentifikator",
-        ),
-        "interval",
-        name = "count_total_and_distinct_fnr_kildedata",
+        name = "count_total_and_distinct_identifikasjonsnummer",
         **kwargs,
     )
 
@@ -76,37 +49,15 @@ def configure_scheduler(**kwargs):
     )
 
     scheduler.add_job(
-        lambda: metrics.check_valid_and_invalid_fnr(
-            database="inndata",
-            table="v_identifikasjonsnummer",
-        ),
+        lambda: metrics.check_valid_and_invalid_idents(),
         "interval",
-        name = "check_valid_and_invalid_fnr_inndata",
-        **kwargs,
-    )
-
-    scheduler.add_job(
-        lambda: metrics.check_valid_and_invalid_fnr(
-            database="historikk",
-            table="v_identifikasjonsnummer",
-        ),
-        "interval",
-        name = "check_valid_and_invalid_fnr_historikk",
-        **kwargs,
-    )
-    scheduler.add_job(
-        lambda: metrics.check_valid_and_invalid_fnr(
-            database="kildedata",
-            table="hendelse_persondok",
-        ),
-        "interval",
-        name = "check_valid_and_invalid_fnr_kildedata",
+        name = "check_valid_and_invalid_idents",
         **kwargs,
     )
 
     # Latest timestamp
     scheduler.add_job(
-        metrics.get_latest_timestamps,
+        lambda: metrics.get_latest_timestamps(),
         "interval",
         name = "get_latest_timestamps",
         **kwargs

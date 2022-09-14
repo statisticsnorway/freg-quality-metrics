@@ -175,28 +175,35 @@ def map_group_by_result_to_metric(
         )
         graphs[metric_key].labels(group=f"{key}", database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
         graphs[metric_key].labels(group=f"{key}", database=f"{database}", table=f"{table}", column=f"{column}").set(val)
-
     return None
 
 
-def get_latest_timestamp(database="kildedata", table="hendelse_persondok") -> None:
-    metric_key = f"{METRIC_PREFIX}latest_md_timestamp_{table}"
+def get_latest_timestamps() -> None:
+    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S")
+    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="ajourholdstidspunkt", parse_format="%b %e, %Y, %I:%M:%S %p")
+    get_latest_timestamp(database="inndata", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
+    return None
+
+
+def get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S") -> None:
+    metric_key = f"{METRIC_PREFIX}latest_timestamp"
     if not metric_key in graphs:
         graphs[metric_key] = prometheus_client.Info(
             metric_key,
-            "The latest md_timestamp "
-            f"in BigQuery table {GCP_PROJECT}.{database}.{table}",
+            "The latest timestamp ",
+            ["database", "table", "column"]
         )
 
     # Read from BigQuery
-    logger.debug('Submitting latest_timestamp query to BigQuery.')
+    logger.debug(f"Submitting latest_timestamp query for {database}.{table}.{column}")
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.latest_timestamp(database=database, table=table)
+    result = BQ.latest_timestamp(database=database, table=table, column=column, parse_format=parse_format)
 
     # Result is a dictionary, where key=table, value=latest_timestamp_for_table
-    graphs[metric_key].info(result)
+    graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
+    graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").info(result)
 
     end = datetime.datetime.now()
-    metrics_time_used("get_latest_timestamp", database, table, "", start, end)
+    metrics_time_used("get_latest_timestamp", database, table, column, start, end)
     return None

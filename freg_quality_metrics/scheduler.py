@@ -106,9 +106,9 @@ def configure_scheduler(**kwargs):
 
     # Latest timestamp
     scheduler.add_job(
-        metrics.get_latest_timestamp,
+        metrics.get_latest_timestamps,
         "interval",
-        name = "get_latest_timestamp",
+        name = "get_latest_timestamps",
         **kwargs
     )
 

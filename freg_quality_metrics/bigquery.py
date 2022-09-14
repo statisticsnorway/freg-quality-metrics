@@ -119,6 +119,37 @@ class BigQuery:
 
         return result
 
+    def count_statsborgerskap(self) -> dict:
+        """
+        Description
+        -----------
+        Count the number of concurrent statsborgerskap
+
+        Return
+        ------
+        dict: keys - statsborgerskap_1, statsborgerskap_2, etc,
+              values - int, occurence of the value.
+        """
+
+        query = f"""
+        SELECT "1" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_1 is not null and statsborgerskap_2 is null) 
+        UNION ALL 
+        SELECT "2" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_2 is not null and statsborgerskap_3 is null) 
+        UNION ALL 
+        SELECT "3" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_3 is not null and statsborgerskap_4 is null) 
+        UNION ALL 
+        SELECT "4" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_4 is not null and statsborgerskap_5 is null) 
+        UNION ALL 
+        SELECT "5" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_5 is not null) 
+        """
+        df = self._query_job_dataframe(query)
+        result = {}
+        for i, row in df.iterrows():
+            result[row.key] = row.occurence
+
+        return result
+
+
     def group_by_and_count(
         self, database="inndata", table="v_status", column="status"
     ) -> dict:
@@ -158,7 +189,12 @@ class BigQuery:
 
         return result
 
-    def latest_timestamp(self, database="kildedata", table="hendelse_persondok") -> str:
+    def latest_timestamp(
+            self,
+            database="kildedata",
+            table="hendelse_persondok",
+            column="md_timestamp",
+            parse_format="%d-%m-%Y %H:%M:%S", ) -> str:
         """
         Description
         -----------
@@ -170,12 +206,12 @@ class BigQuery:
         """
         query = f"""
             SELECT
-                MAX(md_timestamp) as latest_timestamp,
+                FORMAT_DATETIME("%Y-%m-%d %H:%M:%S", MAX(PARSE_TIMESTAMP("{parse_format}", {column}))) as latest_timestamp,
             FROM `{self.GCP_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)
         result = {}
-        result[table] = df["latest_timestamp"][0]
+        result["timestamp"] = df["latest_timestamp"][0]
         return result
 
     def _get_valid_and_invalid_fnr_query(self,database: str,table: str) -> str:

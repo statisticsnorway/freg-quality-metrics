@@ -106,13 +106,29 @@ def configure_scheduler(**kwargs):
 
     # Latest timestamp
     scheduler.add_job(
-        metrics.get_latest_timestamp,
+        metrics.get_latest_timestamps,
         "interval",
-        name = "get_latest_timestamp",
+        name = "get_latest_timestamps",
         **kwargs
     )
 
-    
+    scheduler.add_job(
+        lambda: metrics.count_statsborgerskap(),
+        "interval",
+        name = "count_statsborgerskap",
+        **kwargs,
+    )
+
+    # Count how many with each gender
+    scheduler.add_job(
+        lambda: metrics.group_by_and_count(
+            database="inndata", table="v_kjoenn", column="kjoenn"
+        ),
+        "interval",
+        name = "group_by_and_count_kjoenn",
+        **kwargs,
+    )
+
     # Start/shutdown
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())

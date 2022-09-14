@@ -207,3 +207,26 @@ def get_latest_timestamp(database="kildedata", table="hendelse_persondok", colum
     end = datetime.datetime.now()
     metrics_time_used("get_latest_timestamp", database, table, column, start, end)
     return None
+
+
+def count_statsborgerskap() -> None:
+    # Read from BigQuery
+    logger.debug('Submitting count_statsborgerskap query to BigQuery.')
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    result = BQ.count_statsborgerskap()
+
+    database="klargjort"
+    table="v_avled_statsborgerskap"
+    column="statsborgerskap_x"
+
+    map_group_by_result_to_metric(
+        result=result,
+        database=database,
+        table=table,
+        column=column,
+    )
+
+    end = datetime.datetime.now()
+    metrics_time_used("count", database, table, column, start, end)
+    return None

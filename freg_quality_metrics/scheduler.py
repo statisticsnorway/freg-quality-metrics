@@ -112,7 +112,13 @@ def configure_scheduler(**kwargs):
         **kwargs
     )
 
-    
+    scheduler.add_job(
+        lambda: metrics.count_statsborgerskap(),
+        "interval",
+        name = "count_statsborgerskap",
+        **kwargs,
+    )
+
     # Start/shutdown
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())

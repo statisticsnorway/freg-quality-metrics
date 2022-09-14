@@ -119,6 +119,37 @@ class BigQuery:
 
         return result
 
+    def count_statsborgerskap(self) -> dict:
+        """
+        Description
+        -----------
+        Count the number of concurrent statsborgerskap
+
+        Return
+        ------
+        dict: keys - statsborgerskap_1, statsborgerskap_2, etc,
+              values - int, occurence of the value.
+        """
+
+        query = f"""
+        SELECT "1" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_1 is not null and statsborgerskap_2 is null) 
+        UNION ALL 
+        SELECT "2" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_2 is not null and statsborgerskap_3 is null) 
+        UNION ALL 
+        SELECT "3" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_3 is not null and statsborgerskap_4 is null) 
+        UNION ALL 
+        SELECT "4" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_4 is not null and statsborgerskap_5 is null) 
+        UNION ALL 
+        SELECT "5" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_5 is not null) 
+        """
+        df = self._query_job_dataframe(query)
+        result = {}
+        for i, row in df.iterrows():
+            result[row.key] = row.occurence
+
+        return result
+
+
     def group_by_and_count(
         self, database="inndata", table="v_status", column="status"
     ) -> dict:

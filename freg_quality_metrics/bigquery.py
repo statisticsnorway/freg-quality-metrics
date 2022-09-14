@@ -170,7 +170,7 @@ class BigQuery:
         """
         query = f"""
             SELECT
-                MAX(md_timestamp) as latest_timestamp,
+                MAX(PARSE_DATETIME("%d-%m-%Y %H:%M:%S", md_timestamp)) as latest_timestamp,
             FROM `{self.GCP_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)

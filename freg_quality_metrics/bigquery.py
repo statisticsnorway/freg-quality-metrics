@@ -132,15 +132,35 @@ class BigQuery:
         """
 
         query = f"""
-        SELECT "1" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_1 is not null and statsborgerskap_2 is null) 
-        UNION ALL 
-        SELECT "2" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_2 is not null and statsborgerskap_3 is null) 
-        UNION ALL 
-        SELECT "3" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_3 is not null and statsborgerskap_4 is null) 
-        UNION ALL 
-        SELECT "4" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_4 is not null and statsborgerskap_5 is null) 
-        UNION ALL 
-        SELECT "5" as key, count(*) as occurence FROM `klargjort.v_avled_statsborgerskap` where (statsborgerskap_5 is not null) 
+            WITH stb AS 
+            (
+              SELECT folkeregisteridentifikator, statsborgerskap, ROW_NUMBER() OVER (
+                          PARTITION BY folkeregisteridentifikator 
+                          ORDER BY 
+                              CASE WHEN statsborgerskap = 'NOR' THEN 0 ELSE 1 END ASC,
+                              statsborgerskap ASC
+                      ) AS nbr
+              FROM inndata.v_statsborgerskap
+            ),
+            pivotert AS
+            (
+              SELECT *
+              FROM stb
+              PIVOT
+              (
+                  MAX(statsborgerskap) AS statsborgerskap 
+                  FOR nbr IN (1,2,3,4,5)
+              )
+            )
+            SELECT "1" as key, count(*) as occurence FROM pivotert where (statsborgerskap_1 is not null and statsborgerskap_2 is null) 
+            UNION ALL 
+            SELECT "2" as key, count(*) as occurence FROM pivotert where (statsborgerskap_2 is not null and statsborgerskap_3 is null) 
+            UNION ALL 
+            SELECT "3" as key, count(*) as occurence FROM pivotert where (statsborgerskap_3 is not null and statsborgerskap_4 is null) 
+            UNION ALL 
+            SELECT "4" as key, count(*) as occurence FROM pivotert where (statsborgerskap_4 is not null and statsborgerskap_5 is null) 
+            UNION ALL 
+            SELECT "5" as key, count(*) as occurence FROM pivotert where (statsborgerskap_5 is not null) 
         """
         df = self._query_job_dataframe(query)
         result = {}

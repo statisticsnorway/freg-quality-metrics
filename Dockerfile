@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -17,7 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 RUN apt-get update \
-  && apt-get install -y python3-pip python3-dev curl \
+  && apt-get install -y python3-pip python3-dev build-essential curl \
   && cd /usr/local/bin \
   && ln -s /usr/bin/python3 python \
   && rm -rf /var/lib/apt/lists/*

@@ -2,8 +2,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
-from datetime import datetime
-
 import pandas
 from google.cloud import bigquery
 
@@ -20,7 +18,7 @@ class BigQuery:
         Returns: pandas dataframe.
         """
         logger.debug('Retrieving query and converting to dataframe.')
-        return self.client.query(query).result().to_dataframe()
+        return self.client.query(query).result().to_dataframe(create_bqstorage_client = False)
 
     def count_total_and_uniques(
         self,

@@ -98,6 +98,24 @@ class BigQuery:
         }
         return result
 
+    def pre_aggregated_number_of_citizenships(self) -> dict:
+        query = f"""
+            SELECT datasett, gruppe, antall 
+            FROM `{self.GCP_project}.kvalitet.metrics_antall_statsborgerskap`
+        """
+        df = self._query_job_dataframe(query)
+        return df
+
+    def pre_aggregated_valid_fnr(self) -> dict:
+        query = f"""
+            SELECT datasett, tabell, variabel,
+                fnr_total_count, fnr_invalid_format, fnr_invalid_first_digit, fnr_invalid_date, fnr_invalid_control,
+                dnr_total_count, dnr_invalid_format, dnr_invalid_first_digit, dnr_invalid_date, dnr_invalid_control
+            FROM `{self.GCP_project}.kvalitet.metrics_count_valid_fnr_dnr` 
+        """
+        df = self._query_job_dataframe(query)
+        return df
+
     def pre_aggregated_count_group_by(self) -> dict:
         """
         Get pre-aggregated data in kvalitet.metrics_count_group_by

@@ -17,9 +17,9 @@ def configure_scheduler(**kwargs):
 
     # Count total/unique folkeregisteridentifikator
     scheduler.add_job(
-        lambda: metrics.count_total_and_distinct_identifikasjonsnummer(),
+        lambda: metrics.count_total_and_distinct(),
         "interval",
-        name = "count_total_and_distinct_identifikasjonsnummer",
+        name = "count_total_and_distinct",
         **kwargs,
     )
 
@@ -30,7 +30,6 @@ def configure_scheduler(**kwargs):
         name = "preagg_group_by_and_count",
         **kwargs,
     )
-
 
 
     scheduler.add_job(
@@ -49,7 +48,7 @@ def configure_scheduler(**kwargs):
     )
 
     scheduler.add_job(
-        lambda: metrics.count_statsborgerskap(),
+        lambda: metrics.preagg_num_citizenships(),
         "interval",
         name = "count_statsborgerskap",
         **kwargs,

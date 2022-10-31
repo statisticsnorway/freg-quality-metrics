@@ -55,18 +55,7 @@ def metrics_time_used(metricname, database, table, column, start=datetime.dateti
     return None
 
 
-def count_total_and_distinct_identifikasjonsnummer() -> None:
-    count_total_and_distinct(database="inndata", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
-    count_total_and_distinct(database="historikk", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
-    count_total_and_distinct(database="kildedata", table="hendelse_persondok", column="folkeregisteridentifikator",)
-    return None
-
-
-def count_total_and_distinct(
-        database="inndata",
-        table="v_identifikasjonsnummer",
-        column="folkeregisteridentifikator",
-) -> None:
+def count_total_and_distinct() -> None:
     """
     Trigger an API request to BigQuery, where we find:
     * Total number of rows in a table.
@@ -107,16 +96,9 @@ def count_total_and_distinct(
     return None
 
 
+
+
 def check_valid_and_invalid_idents() -> None:
-    check_valid_and_invalid_fnr(database="inndata", table="v_identifikasjonsnummer",)
-    check_valid_and_invalid_fnr(database="historikk", table="v_identifikasjonsnummer",)
-    check_valid_and_invalid_fnr(database="kildedata", table="hendelse_persondok",)
-    return None
-
-
-def check_valid_and_invalid_fnr(
-        database="inndata", table="v_identifikasjonsnummer"
-) -> None:
     """
     Check the number of valid fnr and dnr in BigQuery database. If the numbers
     are invalid, then they are categorized as either (prioritized order):
@@ -128,23 +110,46 @@ def check_valid_and_invalid_fnr(
     logger.debug('Submitting valid_and_invalid_fnr query to BigQuery.')
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.valid_and_invalid_fnr(database=database, table=table)
+    df = BQ.pre_aggregated_valid_fnr()
 
     # Create and set Prometheus variables
-    for key, val in result.items():
-        metric_key = f"{METRIC_PREFIX}{key}"
-        if not metric_key in graphs:  # (result dict has sufficiently descriptive keys)
-            graphs[metric_key] = prometheus_client.Gauge(
-                metric_key,
-                f"The number of records with {key} ",
-                ["database", "table"]
-            )
-            graphs[metric_key].labels(database=f"{database}", table=f"{table}")  # Initialize label
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}").set(val)
+    metric_total = f"{METRIC_PREFIX}ident_total"
+    metric_format = f"{METRIC_PREFIX}ident_invalid_format"
+    metric_digit = f"{METRIC_PREFIX}ident_invalid_first_digit"
+    metric_date = f"{METRIC_PREFIX}ident_invalid_date"
+    metric_control = f"{METRIC_PREFIX}ident_invalid_control_digit"
+
+    for i, row in df.iterrows():
+        if not metric_total in graphs:
+            graphs[metric_total] = prometheus_client.Gauge(metric_total, f"The number of records with identa by type ", ["database", "table", "column", "type"])
+            graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_format in graphs:
+            graphs[metric_format] = prometheus_client.Gauge(metric_format, f"Idents with invalid format ", ["database", "table", "column", "type"])
+            graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_digit in graphs:
+            graphs[metric_digit] = prometheus_client.Gauge(metric_digit, f"Idents with invalid first digit ", ["database", "table", "column", "type"])
+            graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_date in graphs:
+            graphs[metric_date] = prometheus_client.Gauge(metric_date, f"Idents with invalide date ", ["database", "table", "column", "type"])
+            graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_control in graphs:
+            graphs[metric_control] = prometheus_client.Gauge(metric_control, f"Idents with invalid control digits ", ["database", "table", "column", "type"])
+            graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_total_count)
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_total_count)
+        graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_format)
+        graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_format)
+        graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_first_digit)
+        graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_first_digit)
+        graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_date)
+        graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_date)
+        graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_control)
+        graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_control)
 
     end = datetime.datetime.now()
-    metrics_time_used("check_valid_and_invalid", database, table, "folkeregisteridentifikator", start, end)
+    metrics_time_used("pre_aggregated_valid_fnr", "", "", "", start, end)
     return None
+
 
 def preagg_group_by_and_count() -> None:
     logger.debug('Submitting preagg_group_by_and_count query to BigQuery.')
@@ -165,6 +170,28 @@ def preagg_group_by_and_count() -> None:
 
     end = datetime.datetime.now()
     metrics_time_used(f"preagg_group_by_and_count", "", "", "", start, end)
+    return None
+
+
+def preagg_num_citizenships() -> None:
+    logger.debug('Submitting preagg_num_citizenships query to BigQuery.')
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}ant_statsborgerskap"
+
+    df = BQ.pre_aggregated_number_of_citizenships()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of rows by group",
+                ["group", "database"]
+            )
+            graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}")  # Initialize label
+        graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}").set(row.antall)
+
+    end = datetime.datetime.now()
+    metrics_time_used(f"preagg_num_citizenships", "", "", "", start, end)
     return None
 
 

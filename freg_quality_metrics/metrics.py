@@ -78,22 +78,32 @@ def count_total_and_distinct(
     logger.debug('Submitting count_total_and_uniques query to BigQuery.')
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.count_total_and_uniques(database=database, table=table, column=column)
+    df = BQ.pre_aggregate_total_and_uniques()
 
     # Create and set Prometheus variables
-    for key, val in result.items():
-        metric_key = f"{METRIC_PREFIX}{key}_rows"
-        if not metric_key in graphs:
-            graphs[metric_key] = prometheus_client.Gauge(
-                metric_key,
-                f"The {key} number of rows",
+    metric_total = f"{METRIC_PREFIX}total_rows"
+    metric_unique = f"{METRIC_PREFIX}unique_rows"
+
+    for i, row in df.iterrows():
+        if not metric_total in graphs:
+            graphs[metric_total] = prometheus_client.Gauge(
+                metric_total,
+                f"The total number of rows",
                 ["database", "table", "column"]
             )
-            graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").set(val)
+            graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.totalt)
+        if not metric_unique in graphs:
+            graphs[metric_unique] = prometheus_client.Gauge(
+                metric_unique,
+                f"The unique number of rows",
+                ["database", "table", "column"]
+            )
+            graphs[metric_unique].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_unique].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.distinkte)
 
     end = datetime.datetime.now()
-    metrics_time_used(f"count_total_and_distinct", database, table, column, start, end)
+    metrics_time_used(f"pre_aggregate_total_and_uniques", "", "", "", start, end)
     return None
 
 
@@ -134,6 +144,27 @@ def check_valid_and_invalid_fnr(
 
     end = datetime.datetime.now()
     metrics_time_used("check_valid_and_invalid", database, table, "folkeregisteridentifikator", start, end)
+    return None
+
+def preagg_group_by_and_count() -> None:
+    logger.debug('Submitting preagg_group_by_and_count query to BigQuery.')
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}group_by"
+
+    df = BQ.pre_aggregated_count_group_by()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of rows by group",
+                ["group", "database", "table", "column"]
+            )
+            graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.antall)
+
+    end = datetime.datetime.now()
+    metrics_time_used(f"preagg_group_by_and_count", "", "", "", start, end)
     return None
 
 
@@ -193,35 +224,27 @@ def map_group_by_result_to_metric(
     return None
 
 
-def get_latest_timestamps() -> None:
-    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S")
-    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="ajourholdstidspunkt", parse_format="%b %e, %Y, %I:%M:%S %p")
-    get_latest_timestamp(database="inndata", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
-    get_latest_timestamp(database="historikk", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
-    return None
-
-
-def get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S") -> None:
-    metric_key = f"{METRIC_PREFIX}latest_timestamp"
-    if not metric_key in graphs:
-        graphs[metric_key] = prometheus_client.Info(
-            metric_key,
-            "The latest timestamp ",
-            ["database", "table", "column"]
-        )
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
-
-    # Read from BigQuery
-    logger.debug(f"Submitting latest_timestamp query for {database}.{table}.{column}")
+def get_latest_timestamp() -> None:
+    logger.debug(f"Submitting pre_aggregated_latest_timestamp ")
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.latest_timestamp(database=database, table=table, column=column, parse_format=parse_format)
+    metric_key = f"{METRIC_PREFIX}latest_timestamp"
 
-    # Result is a dictionary, where key=table, value=latest_timestamp_for_table
-    graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").info(result)
+    df = BQ.pre_aggregated_latest_timestamp()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Info(
+                metric_key,
+                "The latest timestamp ",
+                ["database", "table", "column"]
+            )
+            graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        result = {} # Info-metric needs key-value
+        result["timestamp"] = row.latest_timestamp
+        graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").info(result)
 
     end = datetime.datetime.now()
-    metrics_time_used("get_latest_timestamp", database, table, column, start, end)
+    metrics_time_used("pre_aggregated_latest_timestamp", "", "", "", start, end)
     return None
 
 

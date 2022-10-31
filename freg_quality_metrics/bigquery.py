@@ -20,6 +20,15 @@ class BigQuery:
         logger.debug('Retrieving query and converting to dataframe.')
         return self.client.query(query).result().to_dataframe(create_bqstorage_client = False)
 
+    def pre_aggregate_total_and_uniques(self) -> dict:
+        query = f"""
+            SELECT datasett, tabell, variabel, totalt, distinkte
+            FROM `{self.GCP_project}.kvalitet.metrics_count_total_and_distinct`
+        """
+        df = self._query_job_dataframe(query)
+        return df
+
+
     def count_total_and_uniques(
         self,
         database="inndata",
@@ -88,6 +97,20 @@ class BigQuery:
             "invalid_control": count['valid_date_count']-count['valid_control_count']
         }
         return result
+
+    def pre_aggregated_count_group_by(self) -> dict:
+        """
+        Get pre-aggregated data in kvalitet.metrics_count_group_by
+
+        Return: dataframe
+        """
+
+        query = f"""
+        SELECT datasett, tabell, variabel, gruppe, antall
+        FROM `{self.GCP_project}.kvalitet.metrics_count_group_by` 
+        """
+        df = self._query_job_dataframe(query)
+        return df
 
 
     def count_hendelsetype(self) -> dict:
@@ -206,6 +229,14 @@ class BigQuery:
             result[row.key] = row.occurence
 
         return result
+
+    def pre_aggregated_latest_timestamp(self):
+        query = f"""
+            SELECT datasett, tabell, variabel, latest_timestamp
+            FROM `{self.GCP_project}.kvalitet.v_latest_timestamp`
+        """
+        df = self._query_job_dataframe(query)
+        return df
 
     def latest_timestamp(
             self,

@@ -25,28 +25,13 @@ def configure_scheduler(**kwargs):
 
     # Count how many with each status
     scheduler.add_job(
-        lambda: metrics.group_by_and_count(database="inndata", table="v_status", column="status"),
+        lambda: metrics.preagg_group_by_and_count(),
         "interval",
-        name = "group_by_and_count_status",
+        name = "preagg_group_by_and_count",
         **kwargs,
     )
 
-    # Count how many with each sivilstand
-    scheduler.add_job(
-        lambda: metrics.group_by_and_count(
-            database="inndata", table="v_sivilstand", column="sivilstand"
-        ),
-        "interval",
-        name = "group_by_and_count_sivilstand",
-        **kwargs,
-    )
 
-    scheduler.add_job(
-        lambda: metrics.count_hendelsetype(),
-        "interval",
-        name = "count_hendelsetype",
-        **kwargs,
-    )
 
     scheduler.add_job(
         lambda: metrics.check_valid_and_invalid_idents(),
@@ -57,10 +42,10 @@ def configure_scheduler(**kwargs):
 
     # Latest timestamp
     scheduler.add_job(
-        lambda: metrics.get_latest_timestamps(),
+        lambda: metrics.get_latest_timestamp(),
         "interval",
-        name = "get_latest_timestamps",
-        **kwargs
+        name = "get_latest_timestamp",
+       **kwargs
     )
 
     scheduler.add_job(
@@ -70,15 +55,6 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
-    # Count how many with each gender
-    scheduler.add_job(
-        lambda: metrics.group_by_and_count(
-            database="inndata", table="v_kjoenn", column="kjoenn"
-        ),
-        "interval",
-        name = "group_by_and_count_kjoenn",
-        **kwargs,
-    )
 
     # Start/shutdown
     scheduler.start()

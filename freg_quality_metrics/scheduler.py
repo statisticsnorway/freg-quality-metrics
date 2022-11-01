@@ -17,9 +17,9 @@ def configure_scheduler(**kwargs):
 
     # Count total/unique folkeregisteridentifikator
     scheduler.add_job(
-        lambda: metrics.count_total_and_distinct(),
+        lambda: metrics.preagg_total_and_distinct(),
         "interval",
-        name = "count_total_and_distinct",
+        name = "preagg_total_and_distinct",
         **kwargs,
     )
 
@@ -33,24 +33,24 @@ def configure_scheduler(**kwargs):
 
 
     scheduler.add_job(
-        lambda: metrics.check_valid_and_invalid_idents(),
+        lambda: metrics.preagg_valid_and_invalid_idents(),
         "interval",
-        name = "check_valid_and_invalid_idents",
+        name = "preagg_valid_and_invalid_idents",
         **kwargs,
     )
 
     # Latest timestamp
     scheduler.add_job(
-        lambda: metrics.get_latest_timestamp(),
+        lambda: metrics.preagg_latest_timestamp(),
         "interval",
-        name = "get_latest_timestamp",
+        name = "preagg_latest_timestamp",
        **kwargs
     )
 
     scheduler.add_job(
         lambda: metrics.preagg_num_citizenships(),
         "interval",
-        name = "count_statsborgerskap",
+        name = "preagg_num_citizenships",
         **kwargs,
     )
 

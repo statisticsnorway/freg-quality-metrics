@@ -55,7 +55,7 @@ def metrics_time_used(metricname, database, table, column, start=datetime.dateti
     return None
 
 
-def count_total_and_distinct() -> None:
+def preagg_total_and_distinct() -> None:
     """
     Trigger an API request to BigQuery, where we find:
     * Total number of rows in a table.
@@ -92,19 +92,18 @@ def count_total_and_distinct() -> None:
         graphs[metric_unique].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.distinkte)
 
     end = datetime.datetime.now()
-    metrics_time_used(f"pre_aggregate_total_and_uniques", "", "", "", start, end)
+    metrics_time_used(f"preagg_total_and_distinct", "kvalitet", "metrics_count_total_and_distinct", "", start, end)
     return None
 
 
-
-
-def check_valid_and_invalid_idents() -> None:
+def preagg_valid_and_invalid_idents() -> None:
     """
     Check the number of valid fnr and dnr in BigQuery database. If the numbers
     are invalid, then they are categorized as either (prioritized order):
     * 'format' (wrong format, i.e., not 11 digits).
     * 'date' (invalid date, also accounts for dnr).
     * 'control' (invalid control digits, i.e., the two last digits).
+    * 'digit' (invalid first digit, fnr > 3, dnr < 4)
     """
     # Read from BigQuery
     logger.debug('Submitting valid_and_invalid_fnr query to BigQuery.')
@@ -147,7 +146,7 @@ def check_valid_and_invalid_idents() -> None:
         graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_control)
 
     end = datetime.datetime.now()
-    metrics_time_used("pre_aggregated_valid_fnr", "", "", "", start, end)
+    metrics_time_used("preagg_valid_and_invalid_idents", "kvalitet", "metrics_count_valid_fnr_dnr", "", start, end)
     return None
 
 
@@ -169,7 +168,7 @@ def preagg_group_by_and_count() -> None:
         graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.antall)
 
     end = datetime.datetime.now()
-    metrics_time_used(f"preagg_group_by_and_count", "", "", "", start, end)
+    metrics_time_used(f"preagg_group_by_and_count", "kvalitet", "metrics_count_group_by", "", start, end)
     return None
 
 
@@ -184,14 +183,14 @@ def preagg_num_citizenships() -> None:
         if not metric_key in graphs:
             graphs[metric_key] = prometheus_client.Gauge(
                 metric_key,
-                f"The number of rows by group",
+                f"The number of persons with multiple citizenships",
                 ["group", "database"]
             )
             graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}")  # Initialize label
         graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}").set(row.antall)
 
     end = datetime.datetime.now()
-    metrics_time_used(f"preagg_num_citizenships", "", "", "", start, end)
+    metrics_time_used(f"preagg_num_citizenships", "kvalitet", "metrics_antall_statsborgerskap", "", start, end)
     return None
 
 
@@ -208,29 +207,6 @@ def group_by_and_count(database="inndata", table="v_status", column="status") ->
 
     end = datetime.datetime.now()
     metrics_time_used(f"group_by_and_count", database, table, column, start, end)
-    return None
-
-
-def count_hendelsetype() -> None:
-    # Read from BigQuery
-    logger.debug('Submitting count_hendelsetype query to BigQuery.')
-    start = datetime.datetime.now()
-    metrics_count_calls()
-    result = BQ.count_hendelsetype()
-
-    database="kildedata"
-    table="hendelse_persondok"
-    column="hendelsetype"
-
-    map_group_by_result_to_metric(
-        result=result,
-        database=database,
-        table=table,
-        column=column,
-    )
-
-    end = datetime.datetime.now()
-    metrics_time_used("count", database, table, column, start, end)
     return None
 
 
@@ -251,7 +227,7 @@ def map_group_by_result_to_metric(
     return None
 
 
-def get_latest_timestamp() -> None:
+def preagg_latest_timestamp() -> None:
     logger.debug(f"Submitting pre_aggregated_latest_timestamp ")
     start = datetime.datetime.now()
     metrics_count_calls()
@@ -271,28 +247,6 @@ def get_latest_timestamp() -> None:
         graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").info(result)
 
     end = datetime.datetime.now()
-    metrics_time_used("pre_aggregated_latest_timestamp", "", "", "", start, end)
+    metrics_time_used("preagg_latest_timestamp", "kvalitet", "v_latest_timestamp", "", start, end)
     return None
 
-
-def count_statsborgerskap() -> None:
-    # Read from BigQuery
-    logger.debug('Submitting count_statsborgerskap query to BigQuery.')
-    start = datetime.datetime.now()
-    metrics_count_calls()
-    result = BQ.count_statsborgerskap()
-
-    database="klargjort"
-    table="v_avled_statsborgerskap"
-    column="statsborgerskap_x"
-
-    map_group_by_result_to_metric(
-        result=result,
-        database=database,
-        table=table,
-        column=column,
-    )
-
-    end = datetime.datetime.now()
-    metrics_time_used("count", database, table, column, start, end)
-    return None

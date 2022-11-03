@@ -31,7 +31,6 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
-
     scheduler.add_job(
         lambda: metrics.preagg_valid_and_invalid_idents(),
         "interval",
@@ -39,7 +38,6 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
-    # Latest timestamp
     scheduler.add_job(
         lambda: metrics.preagg_latest_timestamp(),
         "interval",
@@ -54,6 +52,28 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
+    # ---
+    # DSF SITUASJONSUTTAK
+    scheduler.add_job(
+        lambda: metrics.dsfsit_latest_timestamp(),
+        "interval",
+        name = "dsfsit_latest_timestamp",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.dsfsit_qa_nullvals_latest(),
+        "interval",
+        name = "dsfsit_qa_nullvals_latest",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.dsfsit_qa_nullvals_diff(),
+        "interval",
+        name = "dsfsit_qa_nullvals_diff",
+        **kwargs,
+    )
 
     # Start/shutdown
     scheduler.start()

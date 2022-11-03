@@ -163,6 +163,80 @@ class BigQuery:
         result["timestamp"] = df["latest_timestamp"][0]
         return result
 
+    # Functions spesific for DSF_SITUASJONSUTTAK
+    def dsfsit_latest_timestamp(self) -> dict:
+        """
+        Description
+        -----------
+        Get the latest (max) timestamp for when DSF_SITUASJONSUTTAK was run
+        """
+        query = f"""
+            select FORMAT_TIMESTAMP("%d-%m-%Y %H:%M:%S", max(tidspunkt)) as latest_timestamp
+                from `{self.GCP_project}.kvalitet.qa_nullvalue_columns`
+                where datasett='klargjort' and tabell='dsf_situasjonsuttak'
+        """
+        df = self._query_job_dataframe(query)
+        result = {}
+        result["timestamp"] = df["latest_timestamp"][0]
+        return result
+
+    def dsfsit_qa_nullvals_latest(self) -> pandas.DataFrame:
+        """
+        Description
+        -----------
+        Gets quality-info on which vairables in dsf_situasjonsuttak that contains missing values, how many rows, and the percentage
+        """
+        query = f"""
+            with ranked_values as 
+            (
+              select tidspunkt, kolonne, ant_nullvals, pct_nullvals,
+              ROW_NUMBER() OVER (PARTITION BY datasett, tabell, kolonne order by tidspunkt desc) as rank
+              from `kvalitet.qa_nullvalue_columns` 
+              where datasett='klargjort' and tabell='dsf_situasjonsuttak'
+            ),
+            max_dato as 
+            (
+              select cast(max(tidspunkt) AS DATE) as dato 
+              from ranked_values
+            )
+            select kolonne, ant_nullvals, pct_nullvals
+            from ranked_values a, max_dato d
+            where a.rank=1
+            and tidspunkt > d.dato  -- This makes sure we only get variables from the latest run
+        """
+        df = self._query_job_dataframe(query)
+        return df
+
+    def dsfsit_qa_nullvals_diff(self) -> pandas.DataFrame:
+        """
+        Description
+        -----------
+        Gets quality-info on which vairables in dsf_situasjonsuttak that has a rise or a drop in number of missing values
+        Has a filter of at least 0.1 difference
+        """
+        query = f"""
+            with differanser as 
+            (
+              select tidspunkt, kolonne, ant_nullvals, pct_nullvals,
+              IFNULL((pct_nullvals - LAG(pct_nullvals) OVER (PARTITION BY kolonne ORDER BY tidspunkt)), pct_nullvals) as pct_diff
+              from `kvalitet.qa_nullvalue_columns`
+              where datasett='klargjort' and tabell='dsf_situasjonsuttak'
+            ), ranked_nyeste as 
+            (
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY kolonne ORDER BY tidspunkt desc) as ranked
+              from differanser
+            ),
+            max_dato as 
+            (
+              select cast(max(tidspunkt) AS DATE) as dato 
+              from differanser
+            )
+            select d.dato, kolonne, ant_nullvals, pct_nullvals, round(pct_diff,2) as pct_diff_last 
+            from ranked_nyeste, max_dato d where ranked=1 and tidspunkt > d.dato 
+            and (pct_diff >= 0.1 or pct_diff <= -0.1)
+        """
+        df = self._query_job_dataframe(query)
+        return df
 
 if __name__ == "__main__":
     BQ = BigQuery()

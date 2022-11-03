@@ -250,3 +250,63 @@ def preagg_latest_timestamp() -> None:
     metrics_time_used("preagg_latest_timestamp", "kvalitet", "v_latest_timestamp", "", start, end)
     return None
 
+
+def dsfsit_latest_timestamp() -> None:
+    logger.debug(f"Submitting dsfsit_latest_timestamp ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}dsfsit_latest_timestamp"
+
+    result = BQ.dsfsit_latest_timestamp()
+    if not metric_key in graphs:
+        graphs[metric_key] = prometheus_client.Info(
+            metric_key, "The latest run of DSF_SITUASJONSUTTAK ",
+        )
+    graphs[metric_key].info(result)
+
+    end = datetime.datetime.now()
+    metrics_time_used("dsfsit_latest_timestamp", "kvalitet", "qa_nullvalue_columns", "", start, end)
+    return None
+
+
+def dsfsit_qa_nullvals_latest() -> None:
+    logger.debug(f"Submitting dsfsit_qa_nullvals_latest ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_num = f"{METRIC_PREFIX}dsfsit_nullvals_latest"
+    metric_pct = f"{METRIC_PREFIX}dsfsit_nullvals_latest_pct"
+
+    df = BQ.dsfsit_qa_nullvals_latest()
+    for i, row in df.iterrows():
+        if not metric_num in graphs:
+            graphs[metric_num] = prometheus_client.Gauge(metric_num, "DSF_SITUASJONSUTTAK: Num of rows with nullvalues ", ["column"])
+            graphs[metric_num].labels(column=f"{row.kolonne}")  # Initialize label
+        if not metric_pct in graphs:
+            graphs[metric_pct] = prometheus_client.Gauge(metric_pct, "DSF_SITUASJONSUTTAK: Percentage of rows with nullvalues ", ["column"])
+            graphs[metric_pct].labels(column=f"{row.kolonne}")  # Initialize label
+
+        graphs[metric_num].labels(column=f"{row.kolonne}").set(row.ant_nullvals)
+        graphs[metric_pct].labels(column=f"{row.kolonne}").set(row.pct_nullvals)
+
+    end = datetime.datetime.now()
+    metrics_time_used("dsfsit_qa_nullvals_latest", "kvalitet", "qa_nullvalue_columns", "", start, end)
+    return None
+
+
+def dsfsit_qa_nullvals_diff() -> None:
+    logger.debug(f"Submitting dsfsit_qa_nullvals_diff ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_pct = f"{METRIC_PREFIX}dsfsit_nullvals_diff_pct"
+
+    df = BQ.dsfsit_qa_nullvals_diff()
+    for i, row in df.iterrows():
+        if not metric_pct in graphs:
+            graphs[metric_pct] = prometheus_client.Gauge(metric_pct, "DSF_SITUASJONSUTTAK: Rise or drop in percentage of rows with nullvalues ", ["column"])
+            graphs[metric_pct].labels(column=f"{row.kolonne}")  # Initialize label
+
+        graphs[metric_pct].labels(column=f"{row.kolonne}").set(row.pct_diff_last)
+
+    end = datetime.datetime.now()
+    metrics_time_used("dsfsit_qa_nullvals_diff", "kvalitet", "qa_nullvalue_columns", "", start, end)
+    return None

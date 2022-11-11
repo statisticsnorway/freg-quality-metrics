@@ -22,6 +22,9 @@ RUN apt-get update \
   && ln -s /usr/bin/python3 python \
   && rm -rf /var/lib/apt/lists/*
 
+# Debug
+RUN cat /etc/*-release && uname -a && sysctl -a && sysctl -a | grep unprivileged_bpf
+
 WORKDIR /usr/app
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
@@ -33,11 +36,11 @@ WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN poetry install --no-dev --no-root
+RUN poetry install --no-root --only main
 
 RUN mkdir freg_quality_metrics
 COPY freg_quality_metrics freg_quality_metrics
-RUN poetry install --no-dev
+RUN poetry install --only main
 
 RUN mkdir /app
 WORKDIR /app

@@ -46,6 +46,7 @@ jobs:
         parameters:
           imageName: $(imageName)
           repoName: $(repoName)
+          gcrServiceConnection: 'gcrServiceConnection-Freg'
           skipImageVulnerabilityScan: 'false'
 
   # Pull and retag docker image. Will only run if it is a tag-operation on the repo.

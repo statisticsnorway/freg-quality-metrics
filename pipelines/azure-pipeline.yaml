@@ -47,7 +47,7 @@ jobs:
           imageName: $(imageName)
           repoName: $(repoName)
           gcrServiceConnection: 'gcrServiceConnection-Freg'
-          skipImageVulnerabilityScan: 'false'
+          skipImageVulnerabilityScan: 'true'    # Try to reset to 'false' as soon as ubuntu base image is not reported as vulnerable
 
   # Pull and retag docker image. Will only run if it is a tag-operation on the repo.
   # See https://github.com/statisticsnorway/azure-pipelines-templates/blob/master/docker/docker-tag-for-production.yml

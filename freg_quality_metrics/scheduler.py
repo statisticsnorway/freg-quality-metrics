@@ -17,66 +17,61 @@ def configure_scheduler(**kwargs):
 
     # Count total/unique folkeregisteridentifikator
     scheduler.add_job(
-        lambda: metrics.count_total_and_distinct_identifikasjonsnummer(),
+        lambda: metrics.preagg_total_and_distinct(),
         "interval",
-        name = "count_total_and_distinct_identifikasjonsnummer",
+        name = "preagg_total_and_distinct",
         **kwargs,
     )
 
     # Count how many with each status
     scheduler.add_job(
-        lambda: metrics.group_by_and_count(database="inndata", table="v_status", column="status"),
+        lambda: metrics.preagg_group_by_and_count(),
         "interval",
-        name = "group_by_and_count_status",
-        **kwargs,
-    )
-
-    # Count how many with each sivilstand
-    scheduler.add_job(
-        lambda: metrics.group_by_and_count(
-            database="inndata", table="v_sivilstand", column="sivilstand"
-        ),
-        "interval",
-        name = "group_by_and_count_sivilstand",
+        name = "preagg_group_by_and_count",
         **kwargs,
     )
 
     scheduler.add_job(
-        lambda: metrics.count_hendelsetype(),
+        lambda: metrics.preagg_valid_and_invalid_idents(),
         "interval",
-        name = "count_hendelsetype",
+        name = "preagg_valid_and_invalid_idents",
         **kwargs,
     )
 
     scheduler.add_job(
-        lambda: metrics.check_valid_and_invalid_idents(),
+        lambda: metrics.preagg_latest_timestamp(),
         "interval",
-        name = "check_valid_and_invalid_idents",
+        name = "preagg_latest_timestamp",
+       **kwargs
+    )
+
+    scheduler.add_job(
+        lambda: metrics.preagg_num_citizenships(),
+        "interval",
+        name = "preagg_num_citizenships",
         **kwargs,
     )
 
-    # Latest timestamp
+    # ---
+    # DSF SITUASJONSUTTAK
     scheduler.add_job(
-        lambda: metrics.get_latest_timestamps(),
+        lambda: metrics.dsfsit_latest_timestamp(),
         "interval",
-        name = "get_latest_timestamps",
-        **kwargs
-    )
-
-    scheduler.add_job(
-        lambda: metrics.count_statsborgerskap(),
-        "interval",
-        name = "count_statsborgerskap",
+        name = "dsfsit_latest_timestamp",
         **kwargs,
     )
 
-    # Count how many with each gender
     scheduler.add_job(
-        lambda: metrics.group_by_and_count(
-            database="inndata", table="v_kjoenn", column="kjoenn"
-        ),
+        lambda: metrics.dsfsit_qa_nullvals_latest(),
         "interval",
-        name = "group_by_and_count_kjoenn",
+        name = "dsfsit_qa_nullvals_latest",
+        **kwargs,
+    )
+
+    scheduler.add_job(
+        lambda: metrics.dsfsit_qa_nullvals_diff(),
+        "interval",
+        name = "dsfsit_qa_nullvals_diff",
         **kwargs,
     )
 

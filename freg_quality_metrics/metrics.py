@@ -55,18 +55,7 @@ def metrics_time_used(metricname, database, table, column, start=datetime.dateti
     return None
 
 
-def count_total_and_distinct_identifikasjonsnummer() -> None:
-    count_total_and_distinct(database="inndata", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
-    count_total_and_distinct(database="historikk", table="v_identifikasjonsnummer", column="folkeregisteridentifikator",)
-    count_total_and_distinct(database="kildedata", table="hendelse_persondok", column="folkeregisteridentifikator",)
-    return None
-
-
-def count_total_and_distinct(
-        database="inndata",
-        table="v_identifikasjonsnummer",
-        column="folkeregisteridentifikator",
-) -> None:
+def preagg_total_and_distinct() -> None:
     """
     Trigger an API request to BigQuery, where we find:
     * Total number of rows in a table.
@@ -78,62 +67,130 @@ def count_total_and_distinct(
     logger.debug('Submitting count_total_and_uniques query to BigQuery.')
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.count_total_and_uniques(database=database, table=table, column=column)
+    df = BQ.pre_aggregate_total_and_uniques()
 
     # Create and set Prometheus variables
-    for key, val in result.items():
-        metric_key = f"{METRIC_PREFIX}{key}_rows"
-        if not metric_key in graphs:
-            graphs[metric_key] = prometheus_client.Gauge(
-                metric_key,
-                f"The {key} number of rows",
+    metric_total = f"{METRIC_PREFIX}total_rows"
+    metric_unique = f"{METRIC_PREFIX}unique_rows"
+
+    for i, row in df.iterrows():
+        if not metric_total in graphs:
+            graphs[metric_total] = prometheus_client.Gauge(
+                metric_total,
+                f"The total number of rows",
                 ["database", "table", "column"]
             )
-            graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").set(val)
+            graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.totalt)
+        if not metric_unique in graphs:
+            graphs[metric_unique] = prometheus_client.Gauge(
+                metric_unique,
+                f"The unique number of rows",
+                ["database", "table", "column"]
+            )
+            graphs[metric_unique].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_unique].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.distinkte)
 
     end = datetime.datetime.now()
-    metrics_time_used(f"count_total_and_distinct", database, table, column, start, end)
+    metrics_time_used(f"preagg_total_and_distinct", "kvalitet", "metrics_count_total_and_distinct", "", start, end)
     return None
 
 
-def check_valid_and_invalid_idents() -> None:
-    check_valid_and_invalid_fnr(database="inndata", table="v_identifikasjonsnummer",)
-    check_valid_and_invalid_fnr(database="historikk", table="v_identifikasjonsnummer",)
-    check_valid_and_invalid_fnr(database="kildedata", table="hendelse_persondok",)
-    return None
-
-
-def check_valid_and_invalid_fnr(
-        database="inndata", table="v_identifikasjonsnummer"
-) -> None:
+def preagg_valid_and_invalid_idents() -> None:
     """
     Check the number of valid fnr and dnr in BigQuery database. If the numbers
     are invalid, then they are categorized as either (prioritized order):
     * 'format' (wrong format, i.e., not 11 digits).
     * 'date' (invalid date, also accounts for dnr).
     * 'control' (invalid control digits, i.e., the two last digits).
+    * 'digit' (invalid first digit, fnr > 3, dnr < 4)
     """
     # Read from BigQuery
     logger.debug('Submitting valid_and_invalid_fnr query to BigQuery.')
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.valid_and_invalid_fnr(database=database, table=table)
+    df = BQ.pre_aggregated_valid_fnr()
 
     # Create and set Prometheus variables
-    for key, val in result.items():
-        metric_key = f"{METRIC_PREFIX}{key}"
-        if not metric_key in graphs:  # (result dict has sufficiently descriptive keys)
-            graphs[metric_key] = prometheus_client.Gauge(
-                metric_key,
-                f"The number of records with {key} ",
-                ["database", "table"]
-            )
-            graphs[metric_key].labels(database=f"{database}", table=f"{table}")  # Initialize label
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}").set(val)
+    metric_total = f"{METRIC_PREFIX}ident_total"
+    metric_format = f"{METRIC_PREFIX}ident_invalid_format"
+    metric_digit = f"{METRIC_PREFIX}ident_invalid_first_digit"
+    metric_date = f"{METRIC_PREFIX}ident_invalid_date"
+    metric_control = f"{METRIC_PREFIX}ident_invalid_control_digit"
+
+    for i, row in df.iterrows():
+        if not metric_total in graphs:
+            graphs[metric_total] = prometheus_client.Gauge(metric_total, f"The number of records with identa by type ", ["database", "table", "column", "type"])
+            graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_format in graphs:
+            graphs[metric_format] = prometheus_client.Gauge(metric_format, f"Idents with invalid format ", ["database", "table", "column", "type"])
+            graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_digit in graphs:
+            graphs[metric_digit] = prometheus_client.Gauge(metric_digit, f"Idents with invalid first digit ", ["database", "table", "column", "type"])
+            graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_date in graphs:
+            graphs[metric_date] = prometheus_client.Gauge(metric_date, f"Idents with invalide date ", ["database", "table", "column", "type"])
+            graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        if not metric_control in graphs:
+            graphs[metric_control] = prometheus_client.Gauge(metric_control, f"Idents with invalid control digits ", ["database", "table", "column", "type"])
+            graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr")  # Initialize label
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_total_count)
+        graphs[metric_total].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_total_count)
+        graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_format)
+        graphs[metric_format].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_format)
+        graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_first_digit)
+        graphs[metric_digit].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_first_digit)
+        graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_date)
+        graphs[metric_date].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_date)
+        graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="fnr").set(row.fnr_invalid_control)
+        graphs[metric_control].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}", type="dnr").set(row.dnr_invalid_control)
 
     end = datetime.datetime.now()
-    metrics_time_used("check_valid_and_invalid", database, table, "folkeregisteridentifikator", start, end)
+    metrics_time_used("preagg_valid_and_invalid_idents", "kvalitet", "metrics_count_valid_fnr_dnr", "", start, end)
+    return None
+
+
+def preagg_group_by_and_count() -> None:
+    logger.debug('Submitting preagg_group_by_and_count query to BigQuery.')
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}group_by"
+
+    df = BQ.pre_aggregated_count_group_by()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of rows by group",
+                ["group", "database", "table", "column"]
+            )
+            graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").set(row.antall)
+
+    end = datetime.datetime.now()
+    metrics_time_used(f"preagg_group_by_and_count", "kvalitet", "metrics_count_group_by", "", start, end)
+    return None
+
+
+def preagg_num_citizenships() -> None:
+    logger.debug('Submitting preagg_num_citizenships query to BigQuery.')
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}ant_statsborgerskap"
+
+    df = BQ.pre_aggregated_number_of_citizenships()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Gauge(
+                metric_key,
+                f"The number of persons with multiple citizenships",
+                ["group", "database"]
+            )
+            graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}")  # Initialize label
+        graphs[metric_key].labels(group=f"{row.gruppe}", database=f"{row.datasett}").set(row.antall)
+
+    end = datetime.datetime.now()
+    metrics_time_used(f"preagg_num_citizenships", "kvalitet", "metrics_antall_statsborgerskap", "", start, end)
     return None
 
 
@@ -150,29 +207,6 @@ def group_by_and_count(database="inndata", table="v_status", column="status") ->
 
     end = datetime.datetime.now()
     metrics_time_used(f"group_by_and_count", database, table, column, start, end)
-    return None
-
-
-def count_hendelsetype() -> None:
-    # Read from BigQuery
-    logger.debug('Submitting count_hendelsetype query to BigQuery.')
-    start = datetime.datetime.now()
-    metrics_count_calls()
-    result = BQ.count_hendelsetype()
-
-    database="kildedata"
-    table="hendelse_persondok"
-    column="hendelsetype"
-
-    map_group_by_result_to_metric(
-        result=result,
-        database=database,
-        table=table,
-        column=column,
-    )
-
-    end = datetime.datetime.now()
-    metrics_time_used("count", database, table, column, start, end)
     return None
 
 
@@ -193,56 +227,86 @@ def map_group_by_result_to_metric(
     return None
 
 
-def get_latest_timestamps() -> None:
-    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S")
-    get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="ajourholdstidspunkt", parse_format="%b %e, %Y, %I:%M:%S %p")
-    get_latest_timestamp(database="inndata", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
-    get_latest_timestamp(database="historikk", table="v_identifikasjonsnummer", column="ajourholdstidspunkt", parse_format="%Y-%m-%dT%H:%M:%E*S%Ez")
+def preagg_latest_timestamp() -> None:
+    logger.debug(f"Submitting pre_aggregated_latest_timestamp ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}latest_timestamp"
+
+    df = BQ.pre_aggregated_latest_timestamp()
+    for i, row in df.iterrows():
+        if not metric_key in graphs:
+            graphs[metric_key] = prometheus_client.Info(
+                metric_key,
+                "The latest timestamp ",
+                ["database", "table", "column"]
+            )
+            graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}")  # Initialize label
+        result = {} # Info-metric needs key-value
+        result["timestamp"] = row.latest_timestamp
+        graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").info(result)
+
+    end = datetime.datetime.now()
+    metrics_time_used("preagg_latest_timestamp", "kvalitet", "v_latest_timestamp", "", start, end)
     return None
 
 
-def get_latest_timestamp(database="kildedata", table="hendelse_persondok", column="md_timestamp", parse_format="%d-%m-%Y %H:%M:%S") -> None:
-    metric_key = f"{METRIC_PREFIX}latest_timestamp"
+def dsfsit_latest_timestamp() -> None:
+    logger.debug(f"Submitting dsfsit_latest_timestamp ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}dsfsit_latest_timestamp"
+
+    result = BQ.dsfsit_latest_timestamp()
     if not metric_key in graphs:
         graphs[metric_key] = prometheus_client.Info(
-            metric_key,
-            "The latest timestamp ",
-            ["database", "table", "column"]
+            metric_key, "The latest run of DSF_SITUASJONSUTTAK ",
         )
-        graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}")  # Initialize label
-
-    # Read from BigQuery
-    logger.debug(f"Submitting latest_timestamp query for {database}.{table}.{column}")
-    start = datetime.datetime.now()
-    metrics_count_calls()
-    result = BQ.latest_timestamp(database=database, table=table, column=column, parse_format=parse_format)
-
-    # Result is a dictionary, where key=table, value=latest_timestamp_for_table
-    graphs[metric_key].labels(database=f"{database}", table=f"{table}", column=f"{column}").info(result)
+    graphs[metric_key].info(result)
 
     end = datetime.datetime.now()
-    metrics_time_used("get_latest_timestamp", database, table, column, start, end)
+    metrics_time_used("dsfsit_latest_timestamp", "kvalitet", "qa_nullvalue_columns", "", start, end)
     return None
 
 
-def count_statsborgerskap() -> None:
-    # Read from BigQuery
-    logger.debug('Submitting count_statsborgerskap query to BigQuery.')
+def dsfsit_qa_nullvals_latest() -> None:
+    logger.debug(f"Submitting dsfsit_qa_nullvals_latest ")
     start = datetime.datetime.now()
     metrics_count_calls()
-    result = BQ.count_statsborgerskap()
+    metric_num = f"{METRIC_PREFIX}dsfsit_nullvals_latest"
+    metric_pct = f"{METRIC_PREFIX}dsfsit_nullvals_latest_pct"
 
-    database="klargjort"
-    table="v_avled_statsborgerskap"
-    column="statsborgerskap_x"
+    df = BQ.dsfsit_qa_nullvals_latest()
+    for i, row in df.iterrows():
+        if not metric_num in graphs:
+            graphs[metric_num] = prometheus_client.Gauge(metric_num, "DSF_SITUASJONSUTTAK: Num of rows with nullvalues ", ["column"])
+            graphs[metric_num].labels(column=f"{row.kolonne}")  # Initialize label
+        if not metric_pct in graphs:
+            graphs[metric_pct] = prometheus_client.Gauge(metric_pct, "DSF_SITUASJONSUTTAK: Percentage of rows with nullvalues ", ["column"])
+            graphs[metric_pct].labels(column=f"{row.kolonne}")  # Initialize label
 
-    map_group_by_result_to_metric(
-        result=result,
-        database=database,
-        table=table,
-        column=column,
-    )
+        graphs[metric_num].labels(column=f"{row.kolonne}").set(row.ant_nullvals)
+        graphs[metric_pct].labels(column=f"{row.kolonne}").set(row.pct_nullvals)
 
     end = datetime.datetime.now()
-    metrics_time_used("count", database, table, column, start, end)
+    metrics_time_used("dsfsit_qa_nullvals_latest", "kvalitet", "qa_nullvalue_columns", "", start, end)
+    return None
+
+
+def dsfsit_qa_nullvals_diff() -> None:
+    logger.debug(f"Submitting dsfsit_qa_nullvals_diff ")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_pct = f"{METRIC_PREFIX}dsfsit_nullvals_diff_pct"
+
+    df = BQ.dsfsit_qa_nullvals_diff()
+    for i, row in df.iterrows():
+        if not metric_pct in graphs:
+            graphs[metric_pct] = prometheus_client.Gauge(metric_pct, "DSF_SITUASJONSUTTAK: Rise or drop in percentage of rows with nullvalues ", ["column"])
+            graphs[metric_pct].labels(column=f"{row.kolonne}")  # Initialize label
+
+        graphs[metric_pct].labels(column=f"{row.kolonne}").set(row.pct_diff_last)
+
+    end = datetime.datetime.now()
+    metrics_time_used("dsfsit_qa_nullvals_diff", "kvalitet", "qa_nullvalue_columns", "", start, end)
     return None

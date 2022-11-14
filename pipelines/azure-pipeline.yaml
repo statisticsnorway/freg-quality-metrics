@@ -3,13 +3,13 @@ name: $(Build.SourceBranch)-$(date:yyyyMMdd)$(rev:.r)
 trigger:
   branches:
     include:
-    - main
+      - main
   tags:
     include:
-    - '*'
+      - "*"
 # Pipeline will be run on this base image
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: "ubuntu-latest"
 
 # Variables global to this pipeline
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables
@@ -23,11 +23,11 @@ variables:
   - name: teamname
     value: freg
   - name: fullSha
-    value: '$(Build.SourceVersion)'
+    value: "$(Build.SourceVersion)"
   - name: imageName
-    value: 'eu.gcr.io/prod-bip/ssb/$(teamname)/$(appname)'
+    value: "eu.gcr.io/prod-bip/ssb/$(teamname)/$(appname)"
   - name: repoName
-    value: 'prod-bip/ssb/$(teamname)/$(appname)'
+    value: "prod-bip/ssb/$(teamname)/$(appname)"
 
 resources:
   repositories:
@@ -40,18 +40,18 @@ resources:
 # Job which builds Docker image, pushes this to GCR and checks for any image vulnerabilities
 jobs:
   - job: buildAndPush
-    displayName: 'build and push Dockerimage'
+    displayName: "build and push Dockerimage"
     steps:
-      - template: 'docker/docker-build-image-and-push-to-gcr.yml@templates'
+      - template: "docker/docker-build-image-and-push-to-gcr.yml@templates"
         parameters:
           imageName: $(imageName)
           repoName: $(repoName)
-          gcrServiceConnection: 'gcrServiceConnection-Freg'
-          skipImageVulnerabilityScan: 'true'    # Try to reset to 'false' as soon as ubuntu base image is not reported as vulnerable
+          gcrServiceConnection: "gcrServiceConnection-Freg"
+          skipImageVulnerabilityScan: "true" # Try to reset to 'false' as soon as ubuntu base image is not reported as vulnerable
 
   # Pull and retag docker image. Will only run if it is a tag-operation on the repo.
   # See https://github.com/statisticsnorway/azure-pipelines-templates/blob/master/docker/docker-tag-for-production.yml
   - template: docker/docker-tag-for-production.yml@templates
     parameters:
-      tagToTag: 'main-$(fullSha)'
+      tagToTag: "main-$(fullSha)"
       gcrImageName: $(imageName)

@@ -22,9 +22,6 @@ RUN apt-get update \
   && ln -s /usr/bin/python3 python \
   && rm -rf /var/lib/apt/lists/*
 
-# Debug
-RUN cat /etc/*-release && uname -a && sysctl -a && sysctl -a | grep unprivileged_bpf
-
 WORKDIR /usr/app
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME

@@ -1,16 +1,21 @@
 import logging
+
+
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
 
-# Local class for calling our BigQuery databases
-from . import metrics, scheduler
+import datetime
 
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
+
+# Local class for calling our BigQuery databases
+from . import metrics, scheduler
+
+
 # from flask_wtf.csrf import CSRFProtect
 
-import datetime
 
 def create_app():
     # Scheduler: keyword arguments (how often to trigger)
@@ -19,9 +24,9 @@ def create_app():
     # Environment variables
 
     # Flask setup
-    logger.info('Initialising Flask app.')
+    logger.info("Initialising Flask app.")
     app = Flask(__name__)
-    
+
     metrics.configure_prometheus(app, **kwargs)
     scheduler.configure_scheduler(**kwargs)
 
@@ -30,12 +35,10 @@ def create_app():
         """Tells whether or not the app is ready to receive requests"""
         return Response(status=200)
 
-
     @app.route("/health/alive")
     def alive():
         """Tells whether or not the app is alive"""
         return Response(status=200)
-
 
     @app.route("/")
     def app_startup():

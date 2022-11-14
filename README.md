@@ -26,4 +26,3 @@ docker build -t freg-metrics .
 docker run --rm -p 8080:8080 freg-metrics
 ```
 And see the result at <http://localhost:8080/metrics>
-

@@ -8,4 +8,3 @@ engine:
     runtime: pytest
     enable-web-ui: false
     load-pytest-plugins: true
-

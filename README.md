@@ -27,3 +27,22 @@ docker run --rm -p 8080:8080 freg-metrics
 ```
 
 And see the result at <http://localhost:8080/metrics>
+
+### pre-commit hooks
+
+Install and use pre-commit hooks in the repo:
+
+```bash
+pre-commit install
+```
+
+The pre-commit hooks require that `poetry` is installed and that `poetry install`
+has been run.
+
+Then the pre-commit checks as described in the file `.pre-commit-config.yaml` will be
+run for each commit. You can also run the checks manually on all files by using the
+command:
+
+```bash
+pre-commit run --all-files
+```

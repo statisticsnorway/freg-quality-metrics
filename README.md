@@ -2,7 +2,7 @@
 
 ## Tech stack
 
-- Python 3.9
+- Python 3.10
 - Poetry for package management
 - FastAPI for api's
 

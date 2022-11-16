@@ -3,8 +3,8 @@ logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
 
-# Local class for calling our BigQuery databases
 from . import metrics, scheduler
+from .config import INTERVAL_MINUTES
 
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
@@ -14,7 +14,7 @@ import datetime
 
 def create_app():
     # Scheduler: keyword arguments (how often to trigger)
-    kwargs = {"minutes": 5, "next_run_time": datetime.datetime.now()}
+    kwargs = {"minutes": INTERVAL_MINUTES, "next_run_time": datetime.datetime.now()}
 
     # Environment variables
 

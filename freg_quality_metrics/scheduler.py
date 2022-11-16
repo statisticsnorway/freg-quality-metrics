@@ -75,6 +75,13 @@ def configure_scheduler(**kwargs):
         **kwargs,
     )
 
+    scheduler.add_job(
+        lambda: metrics.metrics_timestamp(),
+        "interval",
+        name = "metrics_timestamp",
+        **kwargs,
+    )
+
     # Start/shutdown
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())

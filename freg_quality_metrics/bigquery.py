@@ -29,12 +29,7 @@ class BigQuery:
         return df
 
 
-    def count_total_and_uniques(
-        self,
-        database="inndata",
-        table="v_identifikasjonsnummer",
-        column="folkeregisteridentifikator",
-    ) -> dict:
+    def count_total_and_uniques(self, database, table, column) -> dict:
         """
         Description
         -----------
@@ -92,9 +87,7 @@ class BigQuery:
         df = self._query_job_dataframe(query)
         return df
 
-    def group_by_and_count(
-        self, database="inndata", table="v_status", column="status"
-    ) -> dict:
+    def group_by_and_count(self, database, table, column) -> dict:
         """
         Description
         -----------
@@ -133,21 +126,16 @@ class BigQuery:
     def pre_aggregated_latest_timestamp(self) -> pandas.DataFrame:
         query = f"""
             SELECT datasett, tabell, variabel, latest_timestamp
-            FROM `{self.GCP_project}.kvalitet.v_latest_timestamp`
+            FROM `{self.GCP_project}.kvalitet.metrics_latest_timestamp`
         """
         df = self._query_job_dataframe(query)
         return df
 
-    def latest_timestamp(
-            self,
-            database="kildedata",
-            table="hendelse_persondok",
-            column="md_timestamp",
-            parse_format="%d-%m-%Y %H:%M:%S", ) -> str:
+    def latest_timestamp_from_string(self, database, table, column, parse_format) -> str:
         """
         Description
         -----------
-        Get the latest (max) md_timestamp of a BigQuery table:
+        Get the latest (max) timestamp of a BigQuery table where the timestamp is column of type STRING
 
         Return
         ------
@@ -156,6 +144,26 @@ class BigQuery:
         query = f"""
             SELECT
                 FORMAT_DATETIME("%Y-%m-%d %H:%M:%S", MAX(PARSE_TIMESTAMP("{parse_format}", {column}))) as latest_timestamp,
+            FROM `{self.GCP_project}.{database}.{table}`
+        """
+        df = self._query_job_dataframe(query)
+        result = {}
+        result["timestamp"] = df["latest_timestamp"][0]
+        return result
+
+    def latest_timestamp_from_datetime(self, database, table, column) -> str:
+        """
+        Description
+        -----------
+        Get the latest (max) timestamp of a BigQuery table where the timestamp is a column of type DATETIME
+
+        Return
+        ------
+        str: the latest timestamp on the format 'YYYY-MM-DDTHH:MM:SS.XXXXXXZ'
+        """
+        query = f"""
+            SELECT
+                FORMAT_DATETIME("%Y-%m-%d %H:%M:%S", MAX({column})) as latest_timestamp,
             FROM `{self.GCP_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)

@@ -139,7 +139,7 @@ class BigQuery:
 
         Return
         ------
-        str: the latest timestamp on the format 'YYYY-MM-DDTHH:MM:SS.XXXXXXZ'
+        dict: the latest timestamp on the format 'YYYY-MM-DDTHH:MM:SS.XXXXXXZ'
         """
         query = f"""
             SELECT
@@ -159,7 +159,7 @@ class BigQuery:
 
         Return
         ------
-        str: the latest timestamp on the format 'YYYY-MM-DDTHH:MM:SS.XXXXXXZ'
+        dict: the latest timestamp on the format 'YYYY-MM-DDTHH:MM:SS.XXXXXXZ'
         """
         query = f"""
             SELECT

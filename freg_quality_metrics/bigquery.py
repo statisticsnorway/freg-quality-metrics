@@ -131,7 +131,7 @@ class BigQuery:
         df = self._query_job_dataframe(query)
         return df
 
-    def latest_timestamp_from_string(self, database, table, column, parse_format) -> str:
+    def latest_timestamp_from_string(self, database, table, column, parse_format) -> dict:
         """
         Description
         -----------
@@ -151,7 +151,7 @@ class BigQuery:
         result["timestamp"] = df["latest_timestamp"][0]
         return result
 
-    def latest_timestamp_from_datetime(self, database, table, column) -> str:
+    def latest_timestamp_from_datetime(self, database, table, column) -> dict:
         """
         Description
         -----------

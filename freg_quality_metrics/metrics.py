@@ -14,12 +14,11 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 # Metrics dictionary setup
 graphs = {}
-graphs["freg_metrics_interval"] = prometheus_client.Gauge("freg_metrics_interval", "Interval of metrics scheduler")
+graphs["freg_metrics_interval"] = prometheus_client.Gauge("freg_metrics_interval", "Interval of metrics scheduler (in minutes)")
 
 BQ = BigQuery(GCP_project=GCP_PROJECT)
 
 def configure_prometheus(app: Flask, **kwargs):
-
     # csrf = CSRFProtect(app)
     logger.debug('Setting up prometheus client.')
     app.wsgi_app = DispatcherMiddleware(
@@ -28,6 +27,24 @@ def configure_prometheus(app: Flask, **kwargs):
     graphs["freg_metrics_interval"].set(kwargs["minutes"])
 
 
+def metrics_timestamp() -> None:
+    logger.debug(f"Submitting metrics_timestamp")
+    start = datetime.datetime.now()
+    metrics_count_calls()
+    metric_key = f"{METRIC_PREFIX}metrics_timestamp"
+
+    result = BQ.latest_timestamp_from_datetime("kvalitet", "metrics_count_total_and_distinct", "tidspunkt")
+    if not metric_key in graphs:
+        graphs[metric_key] = prometheus_client.Info(
+            metric_key,
+            "Timestamp for when metrics was last updated in Bigquery.kvalitet aggregated tables",
+        )
+    graphs[metric_key].info(result)
+    
+    end = datetime.datetime.now()
+    metrics_time_used("metrics_timestamp", "kvalitet", "metrics_count_total_and_distinct", "tidspunkt", start, end)
+    return None
+    
 
 def metrics_count_calls() -> None:
     metric_key = f"{METRIC_PREFIX}metrics_calls_to_bigquery"
@@ -194,7 +211,7 @@ def preagg_num_citizenships() -> None:
     return None
 
 
-def group_by_and_count(database="inndata", table="v_status", column="status") -> None:
+def group_by_and_count(database, table, column) -> None:
     # Read from BigQuery
     logger.debug('Submitting group_by_and_count query to BigQuery.')
     start = datetime.datetime.now()
@@ -210,9 +227,7 @@ def group_by_and_count(database="inndata", table="v_status", column="status") ->
     return None
 
 
-def map_group_by_result_to_metric(
-        result, database="inndata", table="v_status", column="status"
-) -> None:
+def map_group_by_result_to_metric(result, database, table, column) -> None:
     # Create and set Prometheus variables
     for key, val in result.items():
         metric_key = f"{METRIC_PREFIX}group_by"
@@ -247,7 +262,7 @@ def preagg_latest_timestamp() -> None:
         graphs[metric_key].labels(database=f"{row.datasett}", table=f"{row.tabell}", column=f"{row.variabel}").info(result)
 
     end = datetime.datetime.now()
-    metrics_time_used("preagg_latest_timestamp", "kvalitet", "v_latest_timestamp", "", start, end)
+    metrics_time_used("preagg_latest_timestamp", "kvalitet", "metrics_latest_timestamp", "", start, end)
     return None
 
 

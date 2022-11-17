@@ -10,8 +10,8 @@ import datetime
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
 
-# Local class for calling our BigQuery databases
 from . import metrics, scheduler
+from .config import INTERVAL_MINUTES
 
 
 # from flask_wtf.csrf import CSRFProtect
@@ -19,7 +19,7 @@ from . import metrics, scheduler
 
 def create_app():
     # Scheduler: keyword arguments (how often to trigger)
-    kwargs = {"minutes": 5, "next_run_time": datetime.datetime.now()}
+    kwargs = {"minutes": INTERVAL_MINUTES, "next_run_time": datetime.datetime.now()}
 
     # Environment variables
 

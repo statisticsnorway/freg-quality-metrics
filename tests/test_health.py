@@ -1,14 +1,19 @@
 import logging
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 
 logger = logging.getLogger(__name__)
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope="module")
 def client(bigquery_client):
     from freg_quality_metrics import create_app
+
     client = create_app().test_client()
     return client
+
 
 def test_ready(client):
     """Tests the ready endpoint. Is always 200 for now"""

@@ -1,4 +1,6 @@
 import logging
+
+
 logger = logging.getLogger(__name__)
 logger.debug("Logging is configured.")
 
@@ -17,8 +19,12 @@ class BigQuery:
         Parameters: query string.
         Returns: pandas dataframe.
         """
-        logger.debug('Retrieving query and converting to dataframe.')
-        return self.client.query(query).result().to_dataframe(create_bqstorage_client = False)
+        logger.debug("Retrieving query and converting to dataframe.")
+        return (
+            self.client.query(query)
+            .result()
+            .to_dataframe(create_bqstorage_client=False)
+        )
 
     def pre_aggregate_total_and_uniques(self) -> pandas.DataFrame:
         query = f"""
@@ -27,7 +33,6 @@ class BigQuery:
         """
         df = self._query_job_dataframe(query)
         return df
-
 
     def count_total_and_uniques(self, database, table, column) -> dict:
         """
@@ -57,7 +62,7 @@ class BigQuery:
 
     def pre_aggregated_number_of_citizenships(self) -> pandas.DataFrame:
         query = f"""
-            SELECT datasett, gruppe, antall 
+            SELECT datasett, gruppe, antall
             FROM `{self.GCP_project}.kvalitet.metrics_antall_statsborgerskap`
         """
         df = self._query_job_dataframe(query)
@@ -68,7 +73,7 @@ class BigQuery:
             SELECT datasett, tabell, variabel,
                 fnr_total_count, fnr_invalid_format, fnr_invalid_first_digit, fnr_invalid_date, fnr_invalid_control,
                 dnr_total_count, dnr_invalid_format, dnr_invalid_first_digit, dnr_invalid_date, dnr_invalid_control
-            FROM `{self.GCP_project}.kvalitet.metrics_count_valid_fnr_dnr` 
+            FROM `{self.GCP_project}.kvalitet.metrics_count_valid_fnr_dnr`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -82,7 +87,7 @@ class BigQuery:
 
         query = f"""
         SELECT datasett, tabell, variabel, gruppe, antall
-        FROM `{self.GCP_project}.kvalitet.metrics_count_group_by` 
+        FROM `{self.GCP_project}.kvalitet.metrics_count_group_by`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -105,7 +110,7 @@ class BigQuery:
         query = f"""
             WITH ordered_records_per_person AS (
                 SELECT t.*, ROW_NUMBER() OVER (
-                    PARTITION BY folkeregisteridentifikator 
+                    PARTITION BY folkeregisteridentifikator
                     ORDER BY gyldighetstidspunkt DESC
                 ) AS row_number
                 FROM `{self.GCP_project}.{database}.{table}` AS t
@@ -113,7 +118,7 @@ class BigQuery:
             SELECT
                 {column} AS key,
                 COUNT({column}) AS occurence
-            FROM ordered_records_per_person 
+            FROM ordered_records_per_person
             WHERE row_number = 1
             GROUP BY {column}
         """
@@ -131,7 +136,9 @@ class BigQuery:
         df = self._query_job_dataframe(query)
         return df
 
-    def latest_timestamp_from_string(self, database, table, column, parse_format) -> dict:
+    def latest_timestamp_from_string(
+        self, database, table, column, parse_format
+    ) -> dict:
         """
         Description
         -----------
@@ -195,16 +202,16 @@ class BigQuery:
         Gets quality-info on which vairables in dsf_situasjonsuttak that contains missing values, how many rows, and the percentage
         """
         query = f"""
-            with ranked_values as 
+            with ranked_values as
             (
               select tidspunkt, kolonne, ant_nullvals, pct_nullvals,
               ROW_NUMBER() OVER (PARTITION BY datasett, tabell, kolonne order by tidspunkt desc) as rank
-              from `kvalitet.qa_nullvalue_columns` 
+              from `kvalitet.qa_nullvalue_columns`
               where datasett='klargjort' and tabell='dsf_situasjonsuttak'
             ),
-            max_dato as 
+            max_dato as
             (
-              select cast(max(tidspunkt) AS DATE) as dato 
+              select cast(max(tidspunkt) AS DATE) as dato
               from ranked_values
             )
             select kolonne, ant_nullvals, pct_nullvals
@@ -223,28 +230,29 @@ class BigQuery:
         Has a filter of at least 0.1 difference
         """
         query = f"""
-            with differanser as 
+            with differanser as
             (
               select tidspunkt, kolonne, ant_nullvals, pct_nullvals,
               IFNULL((pct_nullvals - LAG(pct_nullvals) OVER (PARTITION BY kolonne ORDER BY tidspunkt)), pct_nullvals) as pct_diff
               from `kvalitet.qa_nullvalue_columns`
               where datasett='klargjort' and tabell='dsf_situasjonsuttak'
-            ), ranked_nyeste as 
+            ), ranked_nyeste as
             (
               SELECT *, ROW_NUMBER() OVER (PARTITION BY kolonne ORDER BY tidspunkt desc) as ranked
               from differanser
             ),
-            max_dato as 
+            max_dato as
             (
-              select cast(max(tidspunkt) AS DATE) as dato 
+              select cast(max(tidspunkt) AS DATE) as dato
               from differanser
             )
-            select d.dato, kolonne, ant_nullvals, pct_nullvals, round(pct_diff,2) as pct_diff_last 
-            from ranked_nyeste, max_dato d where ranked=1 and tidspunkt > d.dato 
+            select d.dato, kolonne, ant_nullvals, pct_nullvals, round(pct_diff,2) as pct_diff_last
+            from ranked_nyeste, max_dato d where ranked=1 and tidspunkt > d.dato
             and (pct_diff >= 0.1 or pct_diff <= -0.1)
         """
         df = self._query_job_dataframe(query)
         return df
+
 
 if __name__ == "__main__":
     BQ = BigQuery()

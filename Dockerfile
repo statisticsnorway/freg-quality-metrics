@@ -22,9 +22,6 @@ RUN apt-get update \
   && ln -s /usr/bin/python3 python \
   && rm -rf /var/lib/apt/lists/*
 
-# Debug
-RUN cat /etc/*-release && uname -a && sysctl -a && sysctl -a | grep unprivileged_bpf
-
 WORKDIR /usr/app
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
@@ -48,6 +45,12 @@ WORKDIR /app
 COPY ./bin/run.sh /app/bin/run.sh
 COPY run.py /app
 
+# Uncomment the section below when testing locally with Docker
+# Create and copy a service account key for the account
+# data-quality@dev-freg-3896.iam.gserviceaccount.com and store as service-key-dev.json
+# COPY ./service-key-dev.json /app/service-key.json
+# ENV GCP_PROJECT=dev-freg-3896
+# ENV GOOGLE_APPLICATION_CREDENTIALS=service-key.json
 
 # Create a non-root user
 RUN useradd -ms /bin/bash aurora

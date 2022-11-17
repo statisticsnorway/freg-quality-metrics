@@ -1,13 +1,17 @@
 from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def BQ(bigquery_client):
     from freg_quality_metrics.bigquery import BigQuery
+
     BQ = BigQuery()
     return BQ
+
 
 """ Commented out since check is no longer done in python but in bigquery
 

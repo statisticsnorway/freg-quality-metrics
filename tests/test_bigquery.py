@@ -6,11 +6,10 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def BQ(bigquery_client):
+def bq(bigquery_client):
     from freg_quality_metrics.bigquery import BigQuery
 
-    BQ = BigQuery()
-    return BQ
+    return BigQuery()
 
 
 """ Commented out since check is no longer done in python but in bigquery

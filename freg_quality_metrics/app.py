@@ -1,20 +1,16 @@
-import logging
-
-
-logger = logging.getLogger(__name__)
-logger.debug("Logging is configured.")
-
-
 import datetime
+import logging
 
 # Flask (webapp library) and flask-related dispatcher
 from flask import Flask, Response
+from flask_wtf.csrf import CSRFProtect
 
 from . import metrics, scheduler
 from .config import INTERVAL_MINUTES
 
 
-# from flask_wtf.csrf import CSRFProtect
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
 
 
 def create_app():
@@ -26,6 +22,8 @@ def create_app():
     # Flask setup
     logger.info("Initialising Flask app.")
     app = Flask(__name__)
+    csrf = CSRFProtect()
+    csrf.init_app(app)
 
     metrics.configure_prometheus(app, **kwargs)
     scheduler.configure_scheduler(**kwargs)

@@ -10,7 +10,6 @@ INTERVAL_MINUTES = os.environ.get("INTERVAL_MINUTES", 5)
 
 def configure_logging():
     # Configure logging
-    import logging
     import logging.config
 
     logging.config.fileConfig(os.path.join(MODULE_DIR, "logging.config"))

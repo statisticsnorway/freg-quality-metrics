@@ -47,7 +47,7 @@ COPY run.py /app
 
 # Uncomment the section below when testing locally with Docker
 # Create and copy a service account key for the account
-# data-quality@dev-freg-3896.iam.gserviceaccount.com and store as service-key-dev.json
+# qa-metrics-wi@dev-freg-3896.iam.gserviceaccount.com and store as service-key-dev.json
 # COPY ./service-key-dev.json /app/service-key.json
 # ENV GCP_PROJECT=dev-freg-3896
 # ENV GOOGLE_APPLICATION_CREDENTIALS=service-key.json

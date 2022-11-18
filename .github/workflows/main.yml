@@ -1,10 +1,13 @@
-name: Snyk Container
+name: Scanning
 on:
   push:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
   snyk:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -13,7 +16,7 @@ jobs:
       - name: Run Snyk to check Docker image for vulnerabilities
         # Snyk can be used to break the build when it detects vulnerabilities.
         # In this case we want to upload the issues to GitHub Code Scanning
-        continue-on-error: false
+        continue-on-error: true
         uses: snyk/actions/docker@master
         env:
           # In order to use the Snyk Action you will need to have a Snyk API token.
@@ -23,10 +26,10 @@ jobs:
         with:
           image: freg-metrics
           args: --file=Dockerfile --severity-threshold=high
-  #    - name: Upload result to GitHub Code Scanning
-  #      uses: github/codeql-action/upload-sarif@v2
-  #      with:
-  #        sarif_file: snyk.sarif
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk.sarif
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest

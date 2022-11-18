@@ -19,7 +19,10 @@ from .config import INTERVAL_MINUTES
 
 def create_app():
     # Scheduler: keyword arguments (how often to trigger)
-    kwargs = {"minutes": INTERVAL_MINUTES, "next_run_time": datetime.datetime.now()}
+    kwargs = {
+        "minutes": int(INTERVAL_MINUTES),
+        "next_run_time": datetime.datetime.now(),
+    }
 
     # Environment variables
 

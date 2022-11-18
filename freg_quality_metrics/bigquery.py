@@ -1,17 +1,17 @@
 import logging
 
-
-logger = logging.getLogger(__name__)
-logger.debug("Logging is configured.")
-
 import pandas
 from google.cloud import bigquery
 
 
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
+
+
 class BigQuery:
-    def __init__(self, GCP_project="dev-freg-3896"):
-        self.client = bigquery.Client(project=GCP_project)
-        self.GCP_project = GCP_project
+    def __init__(self, gcp_project="dev-freg-3896"):
+        self.client = bigquery.Client(project=gcp_project)
+        self.gcp_project = gcp_project
 
     def _query_job_dataframe(self, query: str) -> pandas.DataFrame:
         """
@@ -29,7 +29,7 @@ class BigQuery:
     def pre_aggregate_total_and_uniques(self) -> pandas.DataFrame:
         query = f"""
             SELECT datasett, tabell, variabel, totalt, distinkte
-            FROM `{self.GCP_project}.kvalitet.metrics_count_total_and_distinct`
+            FROM `{self.gcp_project}.kvalitet.metrics_count_total_and_distinct`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -53,7 +53,7 @@ class BigQuery:
             SELECT
                 COUNT({column}) AS total,
                 COUNT(DISTINCT({column})) AS unique
-            FROM `{self.GCP_project}.{database}.{table}`
+            FROM `{self.gcp_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)
         result = {"total": float(df.total[0]), "unique": float(df.unique[0])}
@@ -63,7 +63,7 @@ class BigQuery:
     def pre_aggregated_number_of_citizenships(self) -> pandas.DataFrame:
         query = f"""
             SELECT datasett, gruppe, antall
-            FROM `{self.GCP_project}.kvalitet.metrics_antall_statsborgerskap`
+            FROM `{self.gcp_project}.kvalitet.metrics_antall_statsborgerskap`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -73,7 +73,7 @@ class BigQuery:
             SELECT datasett, tabell, variabel,
                 fnr_total_count, fnr_invalid_format, fnr_invalid_first_digit, fnr_invalid_date, fnr_invalid_control,
                 dnr_total_count, dnr_invalid_format, dnr_invalid_first_digit, dnr_invalid_date, dnr_invalid_control
-            FROM `{self.GCP_project}.kvalitet.metrics_count_valid_fnr_dnr`
+            FROM `{self.gcp_project}.kvalitet.metrics_count_valid_fnr_dnr`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -87,7 +87,7 @@ class BigQuery:
 
         query = f"""
         SELECT datasett, tabell, variabel, gruppe, antall
-        FROM `{self.GCP_project}.kvalitet.metrics_count_group_by`
+        FROM `{self.gcp_project}.kvalitet.metrics_count_group_by`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -113,7 +113,7 @@ class BigQuery:
                     PARTITION BY folkeregisteridentifikator
                     ORDER BY gyldighetstidspunkt DESC
                 ) AS row_number
-                FROM `{self.GCP_project}.{database}.{table}` AS t
+                FROM `{self.gcp_project}.{database}.{table}` AS t
             )
             SELECT
                 {column} AS key,
@@ -131,7 +131,7 @@ class BigQuery:
     def pre_aggregated_latest_timestamp(self) -> pandas.DataFrame:
         query = f"""
             SELECT datasett, tabell, variabel, latest_timestamp
-            FROM `{self.GCP_project}.kvalitet.metrics_latest_timestamp`
+            FROM `{self.gcp_project}.kvalitet.metrics_latest_timestamp`
         """
         df = self._query_job_dataframe(query)
         return df
@@ -151,11 +151,10 @@ class BigQuery:
         query = f"""
             SELECT
                 FORMAT_DATETIME("%Y-%m-%d %H:%M:%S", MAX(PARSE_TIMESTAMP("{parse_format}", {column}))) as latest_timestamp,
-            FROM `{self.GCP_project}.{database}.{table}`
+            FROM `{self.gcp_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)
-        result = {}
-        result["timestamp"] = df["latest_timestamp"][0]
+        result = {"timestamp": df["latest_timestamp"][0]}
         return result
 
     def latest_timestamp_from_datetime(self, database, table, column) -> dict:
@@ -171,11 +170,10 @@ class BigQuery:
         query = f"""
             SELECT
                 FORMAT_DATETIME("%Y-%m-%d %H:%M:%S", MAX({column})) as latest_timestamp,
-            FROM `{self.GCP_project}.{database}.{table}`
+            FROM `{self.gcp_project}.{database}.{table}`
         """
         df = self._query_job_dataframe(query)
-        result = {}
-        result["timestamp"] = df["latest_timestamp"][0]
+        result = {"timestamp": df["latest_timestamp"][0]}
         return result
 
     # Functions spesific for DSF_SITUASJONSUTTAK
@@ -187,19 +185,19 @@ class BigQuery:
         """
         query = f"""
             select FORMAT_TIMESTAMP("%d-%m-%Y %H:%M:%S", max(tidspunkt)) as latest_timestamp
-                from `{self.GCP_project}.kvalitet.qa_nullvalue_columns`
+                from `{self.gcp_project}.kvalitet.qa_nullvalue_columns`
                 where datasett='klargjort' and tabell='dsf_situasjonsuttak'
         """
         df = self._query_job_dataframe(query)
-        result = {}
-        result["timestamp"] = df["latest_timestamp"][0]
+        result = {"timestamp": df["latest_timestamp"][0]}
         return result
 
     def dsfsit_qa_nullvals_latest(self) -> pandas.DataFrame:
         """
         Description
         -----------
-        Gets quality-info on which vairables in dsf_situasjonsuttak that contains missing values, how many rows, and the percentage
+        Gets quality-info on which vairables in dsf_situasjonsuttak that contains
+        missing values, how many rows, and the percentage.
         """
         query = f"""
             with ranked_values as
@@ -226,7 +224,8 @@ class BigQuery:
         """
         Description
         -----------
-        Gets quality-info on which vairables in dsf_situasjonsuttak that has a rise or a drop in number of missing values
+        Gets quality-info on which vairables in dsf_situasjonsuttak that has a rise
+        or a drop in number of missing values.
         Has a filter of at least 0.1 difference
         """
         query = f"""

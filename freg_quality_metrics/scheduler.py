@@ -1,14 +1,13 @@
 import atexit
 import logging
 
-
-logger = logging.getLogger(__name__)
-logger.debug("Logging is configured.")
-
-
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from . import metrics
+
+
+logger = logging.getLogger(__name__)
+logger.debug("Logging is configured.")
 
 
 def configure_scheduler(**kwargs):
